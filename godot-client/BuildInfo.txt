@@ -1,0 +1,5 @@
+Dark World Prototype v0.2.0
+Build: 2026-06-10
+Server: 5.78.142.138:9000
+Godot Engine: 4.3+ (standard)
+Platform: macOS (Apple Silicon / Intel)

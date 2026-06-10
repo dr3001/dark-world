@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.3-stable_linux.x86_64
+      
+      - name: Setup Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.6.3.stable
+          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates
+          cp /tmp/templates/templates/windows_release_x86_64.exe ~/.local/share/godot/export_templates/4.6.3.stable/
+          cp /tmp/templates/templates/windows_debug_x86_64.exe ~/.local/share/godot/export_templates/4.6.3.stable/
+          cp /tmp/templates/templates/macos.zip ~/.local/share/godot/export_templates/4.6.3.stable/
+      
+      - name: Build Windows
+        run: |
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-pack "Windows" /tmp/win.pck
+          cp /tmp/templates/templates/windows_release_x86_64.exe /tmp/DarkWorld.exe
+          cat /tmp/win.pck >> /tmp/DarkWorld.exe
+          cd /tmp && zip DarkWorld-Windows.zip DarkWorld.exe
+          mkdir -p release && cp /tmp/DarkWorld-Windows.zip release/
+      
+      - name: Build macOS
+        run: |
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-pack "macOS" /tmp/mac.pck
+          cd /tmp/templates/templates && unzip -q macos.zip -d macos_app
+          mkdir -p /tmp/DarkWorld.app/Contents/MacOS /tmp/DarkWorld.app/Contents/Resources
+          cp macos_app/macos_template.app/Contents/MacOS/godot_macos_release.universal /tmp/DarkWorld.app/Contents/MacOS/DarkWorld
+          chmod 755 /tmp/DarkWorld.app/Contents/MacOS/DarkWorld
+          cp /tmp/mac.pck /tmp/DarkWorld.app/Contents/MacOS/DarkWorld.pck
+          cp /tmp/mac.pck /tmp/DarkWorld.app/Contents/Resources/DarkWorld.pck
+          cp macos_app/macos_template.app/Contents/Resources/icon.icns /tmp/DarkWorld.app/Contents/Resources/
+          echo -n "APPL????" > /tmp/DarkWorld.app/Contents/PkgInfo
+          cd /tmp && tar -czf DarkWorld-Mac.tar.gz DarkWorld.app/ && zip -rq DarkWorld-Mac.zip DarkWorld.app/
+          cp /tmp/DarkWorld-Mac.tar.gz release/ && cp /tmp/DarkWorld-Mac.zip release/
+      
+      - name: Generate SHA256
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/DarkWorld-Windows.zip
+            release/DarkWorld-Mac.tar.gz
+            release/DarkWorld-Mac.zip
+            release/SHA256SUMS.txt
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

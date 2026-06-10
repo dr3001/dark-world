@@ -1,0 +1,19 @@
+{
+  "name": "Dark World",
+  "version": "0.2.0",
+  "build_number": 12,
+  "build_date": "2026-06-10",
+  "release_channel": "prototype",
+  "engine": "Godot 4.6.3",
+  "server": "5.78.142.138:9000",
+  "compatibility": {
+    "macos": "10.15+",
+    "windows": "10/11 64-bit"
+  },
+  "downloads": {
+    "mac_targz": "https://dark.zorionlabs.net/downloads/DarkWorld-Mac.tar.gz",
+    "mac_zip": "https://dark.zorionlabs.net/downloads/DarkWorld-Mac.zip",
+    "windows_installer": "https://dark.zorionlabs.net/downloads/DarkWorld-Installer.exe",
+    "windows_portable": "https://dark.zorionlabs.net/downloads/DarkWorld-Windows.zip"
+  }
+}

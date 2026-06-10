@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3 uid="uid://login000000000000001"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+
+[node name="Login" type="Control" node_paths=PackedStringArray("status_label")]
+layout_mode = 3
+anchors_preset = 15
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+color = Color(0.02, 0.02, 0.06, 1)
+anchors_preset = 15
+
+[node name="Title" type="Label" parent="."]
+text = "DARK WORLD"
+layout_mode = 0
+offset_left = 0
+offset_top = 80
+offset_right = 1280
+offset_bottom = 140
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="."]
+text = "Dark Fantasy Medieval Brutal"
+layout_mode = 0
+offset_left = 0
+offset_top = 145
+offset_right = 1280
+offset_bottom = 175
+horizontal_alignment = 1
+
+[node name="EnterButton" type="Button" parent="."]
+text = "Entrar"
+layout_mode = 0
+offset_left = 440
+offset_top = 300
+offset_right = 840
+offset_bottom = 350
+
+[node name="CreateAccountButton" type="Button" parent="."]
+text = "Criar Conta"
+layout_mode = 0
+offset_left = 440
+offset_top = 370
+offset_right = 840
+offset_bottom = 420
+
+[node name="QuitButton" type="Button" parent="."]
+text = "Sair"
+layout_mode = 0
+offset_left = 440
+offset_top = 440
+offset_right = 840
+offset_bottom = 490
+
+[node name="StatusLabel" type="Label" parent="."]
+text = "Pronto para conectar."
+layout_mode = 0
+offset_left = 0
+offset_top = 550
+offset_right = 1280
+offset_bottom = 580
+horizontal_alignment = 1

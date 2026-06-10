@@ -1,0 +1,15 @@
+; Dark World Prototype
+[application]
+config/name="Dark World"
+config/description="Dark Fantasy Medieval Brutal MMO"
+config/version="0.2.0"
+run/main_scene="res://scenes/Login.tscn"
+
+[rendering]
+renderer/rendering_method="forward_plus"
+environment/default_clear_color=Color(0.02, 0.02, 0.04, 1)
+textures/vram_compression/import_etc2_astc=true
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720

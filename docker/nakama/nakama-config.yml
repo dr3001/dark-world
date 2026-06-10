@@ -1,0 +1,26 @@
+name: nakama-node-1
+data_dir: /nakama/data
+
+database:
+  address:
+    - "postgres:5432"
+  user: darkworld_admin
+  database: darkworld_nakama
+
+logger:
+  level: info
+  stdout: true
+
+session:
+  token_expiry_sec: 86400
+
+socket:
+  server_key: darkworld-server-key
+  port: 7350
+
+console:
+  port: 7351
+  username: admin
+
+runtime:
+  http_key: darkworld-http-key

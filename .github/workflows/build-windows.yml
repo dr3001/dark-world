@@ -1,0 +1,54 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'godot-client/**'
+      - '.github/workflows/build-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.3-stable_linux.x86_64
+      
+      - name: Setup Export Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.6.3.stable
+          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates
+          cp /tmp/templates/templates/windows_release_x86_64.exe ~/.local/share/godot/export_templates/4.6.3.stable/
+          cp /tmp/templates/templates/windows_debug_x86_64.exe ~/.local/share/godot/export_templates/4.6.3.stable/
+      
+      - name: Export Windows
+        run: |
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-pack "Windows" build/windows/DarkWorld.pck
+      
+      - name: Prepare Windows Portable
+        run: |
+          cp /tmp/templates/templates/windows_release_x86_64.exe build/windows/
+          # Append pack to binary
+          cd build/windows
+          cat DarkWorld.pck >> windows_release_x86_64.exe
+          mv windows_release_x86_64.exe DarkWorld.exe
+          zip DarkWorld-Windows.zip DarkWorld.exe
+          mkdir -p ../../release
+          cp DarkWorld-Windows.zip ../../release/
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkworld-windows
+          path: release/DarkWorld-Windows.zip
+          retention-days: 7

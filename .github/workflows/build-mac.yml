@@ -1,0 +1,83 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'godot-client/**'
+      - '.github/workflows/build-mac.yml'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.3-stable_linux.x86_64
+      
+      - name: Setup Export Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.6.3.stable
+          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates
+          cp /tmp/templates/templates/macos.zip ~/.local/share/godot/export_templates/4.6.3.stable/
+      
+      - name: Export macOS Pack
+        run: |
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-pack "macOS" build/mac/DarkWorld.pck
+      
+      - name: Assemble .app Bundle
+        run: |
+          cd /tmp/templates/templates
+          unzip -q macos.zip -d macos_app
+          
+          mkdir -p mac_bundle/DarkWorld.app/Contents/MacOS
+          mkdir -p mac_bundle/DarkWorld.app/Contents/Resources
+          
+          cp macos_app/macos_template.app/Contents/MacOS/godot_macos_release.universal mac_bundle/DarkWorld.app/Contents/MacOS/DarkWorld
+          chmod 755 mac_bundle/DarkWorld.app/Contents/MacOS/DarkWorld
+          cp build/mac/DarkWorld.pck mac_bundle/DarkWorld.app/Contents/MacOS/DarkWorld.pck
+          cp build/mac/DarkWorld.pck mac_bundle/DarkWorld.app/Contents/Resources/DarkWorld.pck
+          cp macos_app/macos_template.app/Contents/Resources/icon.icns mac_bundle/DarkWorld.app/Contents/Resources/
+          echo -n "APPL????" > mac_bundle/DarkWorld.app/Contents/PkgInfo
+          
+          cat > mac_bundle/DarkWorld.app/Contents/Info.plist << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key><string>DarkWorld</string>
+	<key>CFBundleIdentifier</key><string>com.darkworld.game</string>
+	<key>CFBundleName</key><string>Dark World</string>
+	<key>CFBundleIconFile</key><string>icon.icns</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>0.2.0</string>
+	<key>CFBundleVersion</key><string>0.2.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>LSMinimumSystemVersion</key><string>10.15</string>
+</dict>
+</plist>
+EOF
+          
+          cd mac_bundle
+          tar -czf DarkWorld-Mac.tar.gz DarkWorld.app/
+          zip -rq DarkWorld-Mac.zip DarkWorld.app/
+          mkdir -p ../../release
+          cp DarkWorld-Mac.tar.gz ../../release/
+          cp DarkWorld-Mac.zip ../../release/
+        working-directory: /tmp
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkworld-mac
+          path: release/DarkWorld-Mac.*
+          retention-days: 7

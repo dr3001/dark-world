@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: darkworld-postgres
+    restart: unless-stopped
+    ports:
+    - 5433:5432
+    environment:
+      POSTGRES_DB: ${DB_NAME:-darkworld}
+      POSTGRES_USER: ${DB_USER:-darkworld_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+    - darkworld_pgdata:/var/lib/postgresql/data
+    - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+    - darkworld-net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${DB_USER:-darkworld_admin}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    container_name: darkworld-redis
+    restart: unless-stopped
+    ports:
+    - 6380:6379
+    volumes:
+    - darkworld_redisdata:/data
+    - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --appendonly yes --requirepass "${REDIS_PASSWORD}"
+    networks:
+    - darkworld-net
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  nakama:
+    image: heroiclabs/nakama:3.31.0
+    container_name: darkworld-nakama
+    restart: unless-stopped
+    ports:
+    - 7350:7350
+    - 7351:7351
+    command:
+    - --config
+    - /nakama/data/nakama-config.yml
+    - --database.address
+    - darkworld_admin:${DB_PASSWORD}@postgres:5432/darkworld_nakama
+    volumes:
+    - ./docker/nakama/data:/nakama/data
+    - ./docker/nakama/nakama-config.yml:/nakama/data/nakama-config.yml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+    - darkworld-net
+    env_file:
+    - .env
+  world-engine:
+    image: darkworld-world-engine:0.4.0
+    container_name: darkworld-world-engine
+    restart: unless-stopped
+    ports:
+    - 9000:9000
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_USER: darkworld_admin
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: darkworld
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      ENGINE_PORT: '9000'
+      ENGINE_TICK_INTERVAL: '2000'
+      AFTERLIFE_TEST_MINUTES: '5'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+    - darkworld-net
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -qO-
+      - http://localhost:9000/health
+      interval: 15s
+      timeout: 5s
+      retries: 3
+networks:
+  darkworld-net:
+    driver: bridge
+volumes:
+  darkworld_pgdata: null
+  darkworld_redisdata: null

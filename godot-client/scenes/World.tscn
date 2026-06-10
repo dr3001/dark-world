@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 12, 15)
+rotation = Vector3(-0.5, 0, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+position = Vector3(10, 20, 10)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.1, 0)
+
+[node name="EntitySpawner" type="Node3D" parent="."]
+
+[node name="HUD" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+
+[node name="EventLog" type="RichTextLabel" parent="HUD"]
+position = Vector2(10, 10)
+size = Vector2(400, 200)
+bbcode_enabled = true
+scroll_following = true
+
+[node name="StatusBar" type="Label" parent="HUD"]
+text = "Vale Cinzento | Vivo"
+position = Vector2(0, 690)
+size = Vector2(1280, 30)
+horizontal_alignment = 1
+
+[node name="DebugPanel" type="Panel" parent="HUD"]
+position = Vector2(10, 620)
+size = Vector2(300, 60)
+
+[node name="KillButton" type="Button" parent="HUD/DebugPanel"]
+text = "[DEBUG] Matar Personagem (K)"
+position = Vector2(5, 5)
+size = Vector2(290, 25)
+
+[node name="ReturnButton" type="Button" parent="HUD/DebugPanel"]
+text = "[DEBUG] Retornar dos Mortos (R)"
+position = Vector2(5, 32)
+size = Vector2(290, 25)
