@@ -1,0 +1,21 @@
+============================================
+ DARK WORLD — BUILD NO MAC
+============================================
+
+Copie e cole esta linha no Terminal do Mac:
+
+curl -s https://raw.githubusercontent.com/dr3001/dark-world/main/scripts/build_mac_native.sh | bash
+
+============================================
+
+O script vai:
+1. Instalar Godot 4.6.3 (se necessario)
+2. Clonar o repositorio do GitHub
+3. Exportar o projeto para macOS
+4. Assinar o app (ad-hoc)
+5. Criar DarkWorld.dmg
+6. Validar e abrir o app
+
+Tempo estimado: 5-10 minutos (depende da internet)
+
+============================================
