@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -748,6 +748,47 @@ addRoute("POST", "/characters/([^/]+)/power-rush/activate", async (req, res, mat
   const expires = new Date(Date.now() + pr.duration_seconds * 1000).toISOString();
   await query("INSERT INTO user_power_rush (user_id,character_id,power_rush_id,expires_at) VALUES ($1,$2,$3,$4)", [uid, matches[1], b.power_rush_id, expires]);
   json(res, { activated: true, expires_at: expires, effect: pr.effects });
+});
+
+// ===== LORE ENGINE =====
+
+addRoute("GET", "/lore/character/([^/]+)", async (_req, res, matches) => {
+  const bio = (await query("SELECT * FROM character_biographies WHERE character_id=$1", [matches[1]])).rows[0];
+  const timeline = (await query("SELECT * FROM character_timeline WHERE character_id=$1 ORDER BY created_at DESC LIMIT 20", [matches[1]])).rows;
+  const rep = (await query("SELECT * FROM character_reputation WHERE character_id=$1", [matches[1]])).rows;
+  const titles = (await query("SELECT * FROM character_titles_earned WHERE character_id=$1", [matches[1]])).rows;
+  json(res, { bio, timeline, reputation: rep, titles });
+});
+
+addRoute("GET", "/lore/clan/([^/]+)", async (_req, res, matches) => {
+  const lore = (await query("SELECT * FROM clan_lore WHERE clan_id=$1", [matches[1]])).rows[0];
+  const chronicles = (await query("SELECT * FROM clan_chronicles WHERE clan_id=$1 ORDER BY created_at DESC LIMIT 20", [matches[1]])).rows;
+  json(res, { lore, chronicles });
+});
+
+addRoute("GET", "/lore/kingdom/([^/]+)", async (_req, res, matches) => {
+  json(res, { lore: (await query("SELECT * FROM kingdom_lore WHERE kingdom_id=$1", [matches[1]])).rows[0] });
+});
+
+addRoute("GET", "/lore/territory/([^/]+)", async (_req, res, matches) => {
+  json(res, { lore: (await query("SELECT * FROM territory_lore WHERE territory_id=$1", [matches[1]])).rows[0] });
+});
+
+addRoute("GET", "/lore/npc/([^/]+)", async (_req, res, matches) => {
+  const name = decodeURIComponent(matches[1]).replace(/\+/g, " ");
+  json(res, { npc: (await query("SELECT * FROM npc_lore WHERE npc_name ILIKE $1", ["%" + name + "%"])).rows[0] || null });
+});
+
+addRoute("GET", "/lore/chronicles", async (_req, res) => {
+  json(res, { chronicles: (await query("SELECT * FROM world_chronicles WHERE is_public=true ORDER BY created_at DESC LIMIT 20")).rows });
+});
+
+addRoute("GET", "/characters/([^/]+)/biography", async (_req, res, matches) => {
+  await query("INSERT INTO character_biographies (character_id) VALUES ($1) ON CONFLICT DO NOTHING", [matches[1]]);
+  await query("INSERT INTO character_timeline (character_id, event_type, title) VALUES ($1, 'birth', 'Despertou no Vale') ON CONFLICT DO NOTHING", [matches[1]]);
+  await query("INSERT INTO character_reputation (character_id, target_type, target_id, reputation_score) VALUES ($1, 'world', 'world', 0) ON CONFLICT DO NOTHING", [matches[1]]);
+  const bio = (await query("SELECT * FROM character_biographies WHERE character_id=$1", [matches[1]])).rows[0];
+  json(res, { biography: bio });
 });
 
 // ===== WAR KINGDOM =====

@@ -23,7 +23,9 @@ var npc_dialogs: Dictionary = {
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
 	"Mercador_Ivan": "Tenho mercadorias para viajantes.",
 	"Curandeira_Lyra": "Vorak ameaca o Vale Cinzento.\nDerrote-o antes que seja tarde.",
-	"Campones_Finn": "A vida era mais tranquila antes de Vorak."
+	"Campones_Finn": "A vida era mais tranquila antes de Vorak.",
+	"Escriba_do_Vale": "Sou o cronista do Vale Cinzento.\nRegistro feitos, guerras e historias.\n[P] para ver seu perfil.",
+	"Arauto_do_Vale": "Sou o mensageiro do Vale.\nAnuncio eventos, temporadas e noticias.\nFique atento aos avisos no chat do sistema."
 }
 
 func _ready():
@@ -354,6 +356,8 @@ func _spawn_npcs():
 		["Mercador Ivan", "Mercador", Vector3(8, 0, -5), Color(0.55, 0.28, 0.12, 1)],
 		["Curandeira Lyra", "Curandeira", Vector3(-7, 0, -6), Color(0.50, 0.45, 0.40, 1)],
 		["Campones Finn", "Campones", Vector3(3, 0, -10), Color(0.55, 0.45, 0.30, 1)],
+		["Escriba do Vale", "Cronista", Vector3(-10, 0, 0), Color(0.60, 0.50, 0.40, 1)],
+		["Arauto do Vale", "Mensageiro", Vector3(10, 0, 0), Color(0.45, 0.40, 0.55, 1)],
 	]
 	for nd in npcs:
 		_npc(nd[2], nd[0], nd[1], nd[3])
@@ -535,6 +539,8 @@ func _unhandled_input(event):
 		if equip_panel_ui: equip_panel_ui.toggle()
 	elif event.keycode == KEY_J:
 		if journal: journal.toggle()
+	elif event.keycode == KEY_P:
+		_show_profile()
 	elif event.keycode == KEY_F5:
 		_manual_save()
 
@@ -683,6 +689,26 @@ func _auto_save():
 	if save_indicator: save_indicator.visible = true
 	net.save_game(character_id, player.global_position, func(_data): pass)
 	_hide_save_indicator(1.0)
+
+func _show_profile():
+	if character_id == "" or not dialog_panel: return
+	var http = HTTPRequest.new(); add_child(http)
+	http.request_completed.connect(func(_r, code, _h, resp):
+		if code == 200 and resp and dialog_panel:
+			var d = JSON.parse_string(resp.get_string_from_utf8())
+			if d and d.has("bio") and d["bio"]:
+				var b = d["bio"]
+				var txt = "=== PERFIL ===\n"
+				txt += "Origem: " + str(b.get("origin_name", "?")) + "\n"
+				txt += "Classe: " + str(b.get("class_path", "Nenhuma")) + "\n"
+				txt += "Territorio: " + str(b.get("birth_homeland", "?")) + "\n"
+				if d.has("titles") and d["titles"].size() > 0:
+					txt += "Titulos: " + str(d["titles"][0].get("title", "")) + "\n"
+				dialog_open = true; dialog_name_label.text = "Perfil do Heroi"
+				dialog_text_label.text = txt; dialog_panel.visible = true
+		http.queue_free()
+	, CONNECT_ONE_SHOT)
+	http.request("http://5.78.142.138:9000/lore/character/" + character_id)
 
 func _hide_save_indicator(delay: float):
 	await get_tree().create_timer(delay).timeout
