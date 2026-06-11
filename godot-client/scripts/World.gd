@@ -18,6 +18,8 @@ var net = null; var chat_display = null; var chat_panel_node: ColorRect
 var speech_bubble = null; var mp_sync = null; var online_label: Label
 var world_sim = null; var time_label: Label; var weather_label_node: Label
 var class_label: Label; var server_label: Label
+var blood_fx = null; var impact_fx = null; var decal_fx = null
+var reaction_fx = null; var camera_fx = null; var audio_fx = null
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -25,7 +27,8 @@ var npc_dialogs: Dictionary = {
 	"Curandeira_Lyra": "Vorak ameaca o Vale Cinzento.\nDerrote-o antes que seja tarde.",
 	"Campones_Finn": "A vida era mais tranquila antes de Vorak.",
 	"Escriba_do_Vale": "Sou o cronista do Vale Cinzento.\nRegistro feitos, guerras e historias.\n[P] para ver seu perfil.",
-	"Arauto_do_Vale": "Sou o mensageiro do Vale.\nAnuncio eventos, temporadas e noticias.\nFique atento aos avisos no chat do sistema."
+	"Arauto_do_Vale": "Sou o mensageiro do Vale.\nAnuncio eventos, temporadas e noticias.\nFique atento aos avisos no chat do sistema.",
+	"Mestre_de_Armas": "Sou o Mestre de Armas.\nTeste seus golpes aqui.\n1=Leve 2=Medio 3=Pesado 4=Block\n5=Critico 6=Sangue 7=Fogo 8=Gelo\n9=Vento 0=Limpar"
 }
 
 func _ready():
@@ -113,6 +116,18 @@ func _ready():
 	if WSScript:
 		world_sim = WSScript.new(); world_sim.name = "WorldSim"; add_child(world_sim)
 		world_sim.setup($SunLight, $WorldEnvironment, time_label, weather_label_node)
+	var BloodScript = load("res://scripts/BloodEffectSystem.gd")
+	if BloodScript: blood_fx = BloodScript.new(); blood_fx.name = "BloodFX"; add_child(blood_fx)
+	var ImpactScript = load("res://scripts/ImpactParticleSystem.gd")
+	if ImpactScript: impact_fx = ImpactScript.new(); impact_fx.name = "ImpactFX"; add_child(impact_fx)
+	var DecalScript = load("res://scripts/CombatDecalSystem.gd")
+	if DecalScript: decal_fx = DecalScript.new(); decal_fx.name = "DecalFX"; add_child(decal_fx)
+	var ReactionScript = load("res://scripts/HitReactionSystem.gd")
+	if ReactionScript: reaction_fx = ReactionScript.new(); reaction_fx.name = "ReactionFX"; add_child(reaction_fx)
+	var CameraFxScript = load("res://scripts/CombatCameraFeedback.gd")
+	if CameraFxScript: camera_fx = CameraFxScript.new(); camera_fx.name = "CameraFX"; add_child(camera_fx); camera_fx.setup(cam)
+	var AudioFxScript = load("res://scripts/CombatAudioSystem.gd")
+	if AudioFxScript: audio_fx = AudioFxScript.new(); audio_fx.name = "AudioFX"; add_child(audio_fx)
 	var MPScript = load("res://scripts/MultiplayerSync.gd")
 	if MPScript and net and player:
 		mp_sync = MPScript.new(); mp_sync.name = "MultiplayerSync"; add_child(mp_sync)
@@ -358,6 +373,7 @@ func _spawn_npcs():
 		["Campones Finn", "Campones", Vector3(3, 0, -10), Color(0.55, 0.45, 0.30, 1)],
 		["Escriba do Vale", "Cronista", Vector3(-10, 0, 0), Color(0.60, 0.50, 0.40, 1)],
 		["Arauto do Vale", "Mensageiro", Vector3(10, 0, 0), Color(0.45, 0.40, 0.55, 1)],
+		["Mestre de Armas", "Treinador", Vector3(0, 0, 15), Color(0.55, 0.35, 0.20, 1)],
 	]
 	for nd in npcs:
 		_npc(nd[2], nd[0], nd[1], nd[3])
@@ -541,6 +557,8 @@ func _unhandled_input(event):
 		if journal: journal.toggle()
 	elif event.keycode == KEY_P:
 		_show_profile()
+	elif event.keycode >= KEY_0 and event.keycode <= KEY_9:
+		_debug_vfx(event.keycode)
 	elif event.keycode == KEY_F5:
 		_manual_save()
 
@@ -710,7 +728,59 @@ func _show_profile():
 	, CONNECT_ONE_SHOT)
 	http.request("http://5.78.142.138:9000/lore/character/" + character_id)
 
-func _hide_save_indicator(delay: float):
+func _debug_vfx(keycode: int):
+	if not player: return
+	var ppos = player.global_position + Vector3(0, 1, 0)
+	if keycode == KEY_0:
+		if blood_fx: blood_fx.clear_all()
+		if decal_fx: decal_fx.clear_all()
+		if camera_fx: camera_fx.reset_camera()
+		print("[VFX] Cleared all effects")
+	elif keycode == KEY_1:
+		if blood_fx: blood_fx.splash_small(ppos)
+		if impact_fx: impact_fx.spawn_impact("metal", ppos, Vector3.RIGHT)
+		if reaction_fx: reaction_fx.setup(player); reaction_fx.hit_light(Vector3.RIGHT)
+		if audio_fx: audio_fx.play_hit("light")
+	elif keycode == KEY_2:
+		if blood_fx: blood_fx.splash_medium(ppos)
+		if impact_fx: impact_fx.spawn_impact("metal", ppos, Vector3.RIGHT)
+		if decal_fx: decal_fx.spawn_decal("blood", ppos - Vector3(0,0.9,0))
+		if reaction_fx: reaction_fx.setup(player); reaction_fx.hit_medium(Vector3.RIGHT)
+		if camera_fx: camera_fx.shake_light()
+		if audio_fx: audio_fx.play_hit("medium")
+	elif keycode == KEY_3:
+		if blood_fx: blood_fx.splash_heavy(ppos)
+		if impact_fx: impact_fx.spawn_impact("metal", ppos, Vector3.RIGHT)
+		if decal_fx: decal_fx.spawn_decal("blood", ppos)
+		if reaction_fx: reaction_fx.setup(player); reaction_fx.hit_heavy(Vector3.RIGHT)
+		if camera_fx: camera_fx.shake_medium()
+		if audio_fx: audio_fx.play_hit("heavy")
+	elif keycode == KEY_4:
+		if impact_fx: impact_fx.spawn_impact("shield", ppos, Vector3.RIGHT)
+		if reaction_fx: reaction_fx.setup(player); reaction_fx.shield_recoil(Vector3.LEFT)
+		if camera_fx: camera_fx.block_flash()
+		if audio_fx: audio_fx.play_block()
+	elif keycode == KEY_5:
+		if blood_fx: blood_fx.burst(ppos)
+		if impact_fx: impact_fx.spawn_impact("metal", ppos, Vector3.UP)
+		if decal_fx: decal_fx.spawn_decal("blood", ppos)
+		if reaction_fx: reaction_fx.setup(player); reaction_fx.hit_heavy(Vector3.RIGHT)
+		if camera_fx: camera_fx.critical_flash()
+		if audio_fx: audio_fx.play_critical()
+	elif keycode == KEY_6:
+		if blood_fx: blood_fx.splash_heavy(ppos)
+		if decal_fx: decal_fx.spawn_decal("blood", ppos)
+		for i in range(4): decal_fx.spawn_decal("blood", ppos + Vector3(randf()*2-1,0,randf()*2-1))
+	elif keycode == KEY_7:
+		if impact_fx: impact_fx.spawn_impact("fire", ppos, Vector3.UP)
+		if decal_fx: decal_fx.spawn_decal("fire", ppos)
+		if camera_fx: camera_fx.damage_flash()
+	elif keycode == KEY_8:
+		if impact_fx: impact_fx.spawn_impact("ice", ppos, Vector3.UP)
+		if decal_fx: decal_fx.spawn_decal("ice", ppos)
+	elif keycode == KEY_9:
+		if impact_fx: impact_fx.spawn_impact("wind", ppos, Vector3.RIGHT)
+		if audio_fx: audio_fx.play_arrow()
 	await get_tree().create_timer(delay).timeout
 	if save_indicator: save_indicator.visible = false
 

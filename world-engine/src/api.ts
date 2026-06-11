@@ -1032,6 +1032,33 @@ addRoute("GET", "/api/launcher/news", async (_req, res) => {
   json(res, { news: ann });
 });
 
+// ===== COMBAT VFX (dev only) =====
+
+addRoute("GET", "/combat-vfx/config", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!b.user_id) return json(res, { config: null });
+  const cfg = (await query("SELECT * FROM combat_vfx_config WHERE user_id = $1", [b.user_id])).rows[0];
+  json(res, { config: cfg || { brutality_level: "dark", particle_quality: "medium" } });
+});
+
+addRoute("PUT", "/combat-vfx/config", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  await query("INSERT INTO combat_vfx_config (user_id, brutality_level) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET brutality_level=$2, updated_at=NOW()", [b.user_id, b.brutality_level || "dark"]);
+  json(res, { updated: true });
+});
+
+addRoute("GET", "/combat-vfx/presets", async (_req, res) => {
+  json(res, { presets: (await query("SELECT * FROM combat_effect_presets ORDER BY name")).rows });
+});
+
+addRoute("POST", "/combat-vfx/event/dev", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff required for dev VFX events" }, 403);
+  await query("INSERT INTO combat_visual_logs (event_type, attacker_id, target_id, position, synced) VALUES ($1,$2,$3,$4,false)", [b.event_type || "dev_test", b.attacker_id, b.target_id, JSON.stringify(b.position || {})]);
+  json(res, { logged: true });
+});
+
 // ===== ROUTER =====
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }
