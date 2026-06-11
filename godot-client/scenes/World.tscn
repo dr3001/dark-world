@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://world00000000000000001"]
+[gd_scene load_steps=5 format=3 uid="uid://world00000000000000001"]
 
 [ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/CameraController.gd" id="2_camera"]
@@ -7,7 +7,7 @@
 size = Vector2(500, 500)
 
 [sub_resource type="StandardMaterial3D" id="mat_ground"]
-albedo_color = Color(0.25, 0.25, 0.3, 1)
+albedo_color = Color(0.25, 0.25, 0.30, 1)
 roughness = 0.9
 
 [sub_resource type="Environment" id="env_default"]
@@ -43,7 +43,7 @@ environment = SubResource("env_default")
 [node name="Ground" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
-surface_material_override/0 = SubResource("mat_ground")
+material_override = SubResource("mat_ground")
 
 [node name="TerrainBuilder" type="Node3D" parent="."]
 
@@ -56,17 +56,17 @@ anchors_preset = 15
 [node name="HPBar" type="ColorRect" parent="HUD"]
 position = Vector2(20, 620)
 size = Vector2(200, 15)
-color = Color(0.8, 0.1, 0.1)
+color = Color(0.8, 0.1, 0.1, 1)
 
 [node name="HPBarBG" type="ColorRect" parent="HUD"]
 position = Vector2(18, 618)
 size = Vector2(204, 19)
-color = Color(0.1, 0.1, 0.1)
+color = Color(0.1, 0.1, 0.1, 1)
 
 [node name="ManaBar" type="ColorRect" parent="HUD"]
 position = Vector2(20, 640)
 size = Vector2(200, 10)
-color = Color(0.1, 0.3, 0.9)
+color = Color(0.1, 0.3, 0.9, 1)
 
 [node name="PlayerName" type="Label" parent="HUD"]
 text = "Heroi do Vale"

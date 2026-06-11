@@ -1,5 +1,5 @@
 72322a848ab928aa5c89f0cb78209805
-::res://::1781142565
+::res://::1781142881
 BuildInfo.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
 export_presets.cfg::TextFile::-1::1781133180::0::1::::<><><>0<>0<><>::
 Version.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
@@ -13,11 +13,11 @@ Version.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
 ::res://assets/quaternius/props/::1781141985
 ::res://docs/::1781125164
 GODOT_IMPORT_COMPATIBILITY.md::TextFile/TextFile::-1::1781125164::0::1::::<><><>0<>0<><>::
-::res://scenes/::1781142209
+::res://scenes/::1781143009
 Afterlife.tscn::PackedScene::5486015816436539144::1781136485::0::1::::<><><>0<>0<><>::res://scripts/Afterlife.gd
 Login.tscn::PackedScene::2756292848498450184::1781131930::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
 Main.tscn::PackedScene/PackedScene::-1::1781127607::0::1::::<><><>0<>0<><>::
-World.tscn::PackedScene::1731413958864674568::1781142209::0::1::::<><><>0<>0<><>::res://scripts/World.gd<>res://scripts/CameraController.gd
+World.tscn::PackedScene::1731413958864674568::1781143009::0::1::::<><><>0<>0<><>::res://scripts/World.gd<>res://scripts/CameraController.gd
 ::res://scenes/models/::1781141237
 Dragon.tscn::PackedScene::4309138898425749425::1781141313::0::1::::<><><>0<>0<><>::res://scripts/DragonModel.gd<>res://scripts/DragonAI.gd
 Player.tscn::PackedScene::8773535813890285320::1781141237::0::1::::<><><>0<>0<><>::res://scripts/PlayerModel.gd
@@ -39,6 +39,7 @@ QuestSystem.gd::GDScript::2970021575417554408::1781141313::0::1::::<>Node<><>0<>
 TerrainBuilder.gd::GDScript::4362131768288800160::1781141278::0::1::::<>Node3D<><>0<>0<><>::
 World.gd::GDScript::2723746501345195831::1781142700::0::1::::<>Node3D<><>0<>0<><>::
 WorldState.gd::GDScript/GDScript::4745681722969762690::1781125123::0::1::::<>Node<><>0<>0<><>::
-::res://scripts/test/::1781142702
+::res://scripts/test/::1781142899
 DragonTest.gd::GDScript::7086646723013348122::1781142563::0::1::::<>Node3D<><>0<>0<><>::
 TestLoader.gd::GDScript::3518368183702803958::1781137806::0::1::::<>Node<><>0<>0<><>::
+WorldLoader.gd::GDScript::7944734138341292059::1781142881::0::1::::<>Node<><>0<>0<><>::
