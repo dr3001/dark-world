@@ -156,6 +156,17 @@ func _ready():
 		mp_sync = MPScript.new(); mp_sync.name = "MultiplayerSync"; add_child(mp_sync)
 		mp_sync.setup(net, character_id, player, online_label)
 	_load_character_data()
+	if blood_fx and character_id != "":
+		var cfg_http = HTTPRequest.new(); add_child(cfg_http)
+		cfg_http.request_completed.connect(func(_r, code, _h, resp):
+			if code == 200 and resp and blood_fx:
+				var d = JSON.parse_string(resp.get_string_from_utf8())
+				if d and d.has("config") and d["config"]:
+					var level = str(d["config"].get("brutality_level", "dark"))
+					blood_fx.brutality = level
+			cfg_http.queue_free()
+		, CONNECT_ONE_SHOT)
+		cfg_http.request("http://5.78.142.138:9000/combat-vfx/config?user_id=" + character_id)
 
 # ===== PLAZA =====
 func _build_plaza():
