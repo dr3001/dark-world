@@ -100,9 +100,9 @@ jobs:
           path: staging/macos/DarkWorld-Launcher-mac.tar.gz
 
   deploy-vps:
-    needs: [build-windows, build-macos]
+    needs: [build-windows]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.build-windows.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -114,6 +114,7 @@ jobs:
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: darkworld-launcher-macos
           path: artifacts/macos
