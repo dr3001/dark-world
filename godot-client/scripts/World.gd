@@ -78,6 +78,15 @@ func _spawn_player():
 	if cam: cam.target = player
 	
 	print("[WORLD] Player spawned at ", player.global_position)
+	
+	# Spawn a dragon RIGHT HERE for testing
+	var dragon_scene = load("res://scenes/models/Dragon.tscn")
+	if dragon_scene:
+		var test_dragon = dragon_scene.instantiate()
+		test_dragon.name = "Vorak_Test"
+		test_dragon.position = Vector3(10, 0, 10)
+		add_child(test_dragon)
+		print("[WORLD] Test dragon spawned at (10,0,10)")
 
 func _on_entities(data):
 	if data == null or not data is Dictionary or not data.has("entities"):
