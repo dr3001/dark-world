@@ -243,10 +243,25 @@ addRoute("POST", "/characters/([^/]+)/heal", async (req, res, matches) => {
   const w = await query("SELECT * FROM wallets WHERE character_id = $1", [cid]);
   if (!w.rows[0] || parseFloat(w.rows[0].balance) < cost) return json(res, { error: "Insufficient zorium", cost }, 400);
   await query("UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE character_id = $2", [cost, cid]);
+  await query("UPDATE character_stats SET zorium = zorium - $1, hp = max_hp, updated_at = NOW() WHERE character_id = $2", [cost, cid]);
   await query("INSERT INTO transactions (from_wallet_id, amount, tx_type, description) VALUES ($1,$2,'purchase','heal')", [w.rows[0].id, cost]);
-  await query("UPDATE character_stats SET hp = max_hp, updated_at = NOW() WHERE character_id = $1", [cid]);
   const stats = await query("SELECT hp, max_hp, zorium FROM character_stats WHERE character_id = $1", [cid]);
   json(res, { healed: true, cost, stats: stats.rows[0] });
+});
+
+addRoute("POST", "/characters/([^/]+)/spend", async (req, res, matches) => {
+  const cid = matches[1];
+  const b = await body(req);
+  const amount = parseFloat(b.amount as string);
+  const desc = (b.description as string) || "purchase";
+  if (!amount || amount <= 0) return json(res, { error: "Invalid amount" }, 400);
+  const w = await query("SELECT * FROM wallets WHERE character_id = $1", [cid]);
+  if (!w.rows[0] || parseFloat(w.rows[0].balance) < amount) return json(res, { error: "Insufficient zorium", required: amount }, 400);
+  await query("UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE character_id = $2", [amount, cid]);
+  await query("UPDATE character_stats SET zorium = zorium - $1, updated_at = NOW() WHERE character_id = $2", [amount, cid]);
+  await query("INSERT INTO transactions (from_wallet_id, amount, tx_type, description) VALUES ($1,$2,'purchase',$3)", [w.rows[0].id, amount, desc]);
+  const bal = await query("SELECT balance FROM wallets WHERE character_id = $1", [cid]);
+  json(res, { spent: amount, balance: parseFloat(bal.rows[0].balance), description: desc });
 });
 
 addRoute("GET", "/loot/([^/]+)/([^/]+)", async (_req, res, matches) => {

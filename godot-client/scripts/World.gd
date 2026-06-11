@@ -54,6 +54,7 @@ func _ready():
 	if InvScript:
 		inv_system = InvScript.new(); add_child(inv_system)
 		inv_system.setup(inventory_panel, tooltip_node)
+		inv_system.item_selected.connect(_on_inventory_item_selected)
 	var EquipScript = load("res://scripts/EquipmentPanel.gd")
 	if EquipScript:
 		equip_panel_ui = EquipScript.new(); add_child(equip_panel_ui)
@@ -527,6 +528,8 @@ func _open_dialog(npc: Node3D):
 		base_text += "\n\n[F] Forjar Espada de Ferro (30 Z)"
 	if dialog_text_label: dialog_text_label.text = base_text
 	if interact_hint: interact_hint.text = ""
+	if net and character_id != "":
+		net.record_npc_memory(npc.name, character_id, "interaction", {"action": "dialog_opened"}, func(_d): pass)
 	_advance_quest(npc.name)
 
 func _close_dialog():
@@ -546,6 +549,8 @@ func _handle_dialog_key(keycode: int):
 			quest_stage = 1
 			if quest_text: quest_text.text = "MISSAO: Derrote Vorak, o Antigo"
 			if dialog_text_label: dialog_text_label.text = "Missao aceita! Derrote Vorak."
+			if net and character_id != "":
+				net.accept_quest(character_id, "d0000000-0000-0000-0000-000000000001", func(_d): pass)
 	elif dialog_npc_id == "Ferreiro_Thorin":
 		if keycode == KEY_F:
 			_forge_item()
@@ -593,21 +598,26 @@ func _heal_player():
 	)
 
 func _forge_item():
-	if not char_profile: return
-	if not char_profile.spend_zorium(30.0):
-		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente. (30 Z)"
-		return
-	if dialog_text_label: dialog_text_label.text = "Espada de Ferro forjada!"
-	var iron_sword_id = "c0000000-0000-0000-0000-000000000009"
-	if inv_system:
-		inv_system.add_item(inv_system.get_used_count(), {
-			"item_name": "Espada de Ferro", "item_type": "weapon",
-			"rarity": "uncommon", "slot_type": "weapon",
-			"base_stats": {"attack": 8, "speed": 0.9, "critical": 0.03},
-			"quantity": 1, "item_id": iron_sword_id
-		})
-	if net and character_id != "":
-		net.add_to_inventory(character_id, iron_sword_id, 1, func(_d): pass)
+	if not net or character_id == "": return
+	if dialog_text_label: dialog_text_label.text = "Forjando..."
+	net.spend_zorium(character_id, 30.0, "forge_iron_sword", func(data):
+		if data and data.has("error"):
+			if dialog_text_label: dialog_text_label.text = str(data["error"])
+			return
+		if char_profile: char_profile.set_stat("zorium", float(data.get("balance", 0)))
+		var iron_sword_id = "c0000000-0000-0000-0000-000000000009"
+		net.add_to_inventory(character_id, iron_sword_id, 1, func(inv_data):
+			if inv_data and inv_data.has("added"):
+				if dialog_text_label: dialog_text_label.text = "Espada de Ferro forjada! (-30 Z)"
+				if inv_system:
+					inv_system.add_item(int(inv_data["added"].get("slot_index", 0)), {
+						"item_name": "Espada de Ferro", "item_type": "weapon",
+						"rarity": "uncommon", "slot_type": "weapon",
+						"base_stats": {"attack": 8, "speed": 0.9, "critical": 0.03},
+						"quantity": 1, "item_id": iron_sword_id
+					})
+		)
+	)
 
 func _manual_save():
 	if not net or character_id == "" or not player: return
@@ -615,15 +625,27 @@ func _manual_save():
 	if save_indicator: save_indicator.visible = true
 	net.save_game(character_id, player.global_position, func(data):
 		print("[WORLD] Save result: ", data)
-		await get_tree().create_timer(1.5).timeout
-		if save_indicator: save_indicator.visible = false
 	)
+	_hide_save_indicator(1.5)
 
 func _auto_save():
 	if not net or character_id == "" or not player: return
 	if save_indicator: save_indicator.text = "Auto-save..."
 	if save_indicator: save_indicator.visible = true
-	net.save_game(character_id, player.global_position, func(_data):
-		await get_tree().create_timer(1.0).timeout
-		if save_indicator: save_indicator.visible = false
+	net.save_game(character_id, player.global_position, func(_data): pass)
+	_hide_save_indicator(1.0)
+
+func _hide_save_indicator(delay: float):
+	await get_tree().create_timer(delay).timeout
+	if save_indicator: save_indicator.visible = false
+
+func _on_inventory_item_selected(slot_index: int, item_data: Dictionary):
+	var slot_type = item_data.get("slot_type", "")
+	if slot_type == "" or slot_type == null: return
+	var item_id = item_data.get("item_id", "")
+	if item_id == "" or not net or character_id == "": return
+	net.equip_item(character_id, item_id, slot_type, func(data):
+		if data and data.has("equipped"):
+			if equip_panel_ui: equip_panel_ui.equip_item(slot_type, item_data)
+			print("[WORLD] Equipped ", item_data.get("item_name", "?"), " in ", slot_type)
 	)

@@ -101,3 +101,7 @@ func add_to_inventory(char_id: String, item_id: String, qty: int, callback: Call
 func record_npc_memory(npc_entity_id: String, char_id: String, memory_type: String, content: Dictionary, callback: Callable):
 	var b = JSON.stringify({"character_id": char_id, "memory_type": memory_type, "content": content})
 	_make_request(SERVER_URL + "/npcs/" + npc_entity_id + "/memory", callback, "npc_memory", HTTPClient.METHOD_POST, b)
+
+func spend_zorium(char_id: String, amount: float, description: String, callback: Callable):
+	var b = JSON.stringify({"amount": amount, "description": description})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/spend", callback, "spend", HTTPClient.METHOD_POST, b)
