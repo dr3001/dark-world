@@ -1,0 +1,166 @@
+openapi: "3.0.0"
+info:
+  title: Dark World API
+  version: "1.0.0"
+  description: API pública do Dark World MMORPG
+servers:
+  - url: https://dark.zorionlabs.net/dw-api
+    description: Production API via HTTPS proxy
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  version: { type: string }
+                  modules: { type: array, items: { type: string } }
+
+  /world/state:
+    get:
+      operationId: getWorldState
+      summary: Current world time and weather
+      responses:
+        200:
+          description: World state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time:
+                    type: object
+                    properties:
+                      hour: { type: integer }
+                      day: { type: integer }
+                      season: { type: string }
+                  weather:
+                    type: object
+                    properties:
+                      state: { type: string }
+                      temperature: { type: number }
+                      wind_speed: { type: number }
+
+  /classes:
+    get:
+      operationId: getClasses
+      summary: List all hero classes
+      responses:
+        200:
+          description: Hero classes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  classes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        description: { type: string }
+                        base_hp: { type: integer }
+
+  /servers:
+    get:
+      operationId: getServers
+      summary: List game servers
+      responses:
+        200:
+          description: Servers list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servers: { type: array }
+
+  /players/online:
+    get:
+      operationId: getOnlinePlayers
+      summary: Count online players
+      responses:
+        200:
+          description: Player count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online: { type: integer }
+
+  /rankings/global:
+    get:
+      operationId: getGlobalRankings
+      summary: Global player rankings
+      responses:
+        200:
+          description: Rankings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rankings: { type: array }
+
+  /events/calendar:
+    get:
+      operationId: getEventCalendar
+      summary: Server calendar with events, maintenance, announcements
+      responses:
+        200:
+          description: Calendar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events: { type: array }
+                  maintenance: { type: array }
+                  announcements: { type: array }
+
+  /api/public/v1/health:
+    get:
+      operationId: publicHealth
+      summary: Public API health check
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  mode: { type: string }
+                  version: { type: string }
+
+  /api/public/v1/world/state:
+    get:
+      operationId: publicWorldState
+      summary: Public world state
+      responses:
+        200:
+          description: World state
+
+  /api/public/v1/characters/{characterId}/profile:
+    get:
+      operationId: getPublicCharacterProfile
+      summary: Public character profile
+      parameters:
+        - name: characterId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Character profile

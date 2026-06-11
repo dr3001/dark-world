@@ -1,0 +1,7 @@
+{
+  "name": "darkworld-launcher",
+  "version": "1.0.0",
+  "description": "Dark World Super Launcher",
+  "main": "launcher.js",
+  "bin": { "darkworld-launcher": "launcher.js" }
+}
