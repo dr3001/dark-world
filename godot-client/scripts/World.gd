@@ -5,12 +5,26 @@ var cam: Camera3D
 var hp_bar: ColorRect; var hp_text: Label; var fps_label: Label
 var quest_text: Label; var pos_label: Label; var obj_label: Label
 var tree_count: int = 0; var house_count: int = 0; var npc_count: int = 0; var dragon_count: int = 0
+var dialog_panel: ColorRect; var dialog_name_label: Label; var dialog_text_label: Label
+var interact_hint: Label; var dialog_open: bool = false; var nearest_npc: Node3D = null
+var quest_stage: int = 0
+var npc_dialogs: Dictionary = {
+	"Guardiao_do_Vale": "Bem-vindo ao Vale Cinzento.\nO dragao Vorak voltou.\nFale com o ferreiro antes de partir.",
+	"Ferreiro_Thorin": "Vorak destruiu minha forja anterior.\nPegue esta espada. Vai precisar.\nBoa sorte, guerreiro.",
+	"Mercador_Ivan": "Pocoes? Armaduras? Tudo por um preco justo.\n(Em breve)",
+	"Curandeira_Lyra": "Posso curar suas feridas.\nVolte quando precisar.\n(Em breve)",
+	"Campones_Finn": "Cuidado com o dragao ao leste.\nEle devora qualquer um que se aproxima."
+}
 
 func _ready():
 	print("[WORLD] START")
 	hp_bar = get_node_or_null("HUD/HPBar"); hp_text = get_node_or_null("HUD/HPText")
 	fps_label = get_node_or_null("HUD/FPS"); quest_text = get_node_or_null("HUD/QuestText")
 	pos_label = get_node_or_null("HUD/Position"); obj_label = get_node_or_null("HUD/ObjectCount")
+	dialog_panel = get_node_or_null("HUD/DialogPanel")
+	dialog_name_label = get_node_or_null("HUD/DialogPanel/DialogName")
+	dialog_text_label = get_node_or_null("HUD/DialogPanel/DialogText")
+	interact_hint = get_node_or_null("HUD/InteractHint")
 	cam = $Camera3D
 	
 	_build_plaza()
@@ -25,7 +39,8 @@ func _ready():
 	_build_road_torches()
 	
 	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
-	_log("Vale Cinzento — " + str(get_child_count()) + " objetos carregados")
+	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
+	if quest_text: quest_text.text = "Explore o Vale Cinzento"
 
 # ===== PLAZA =====
 func _build_plaza():
@@ -250,7 +265,7 @@ func _fallback_dragon(pos: Vector3):
 # ===== NPCS =====
 func _spawn_npcs():
 	var npcs = [
-		["Guarda do Vale", "Guarda", Vector3(5, 0, 5), Color(0.40, 0.35, 0.30, 1)],
+		["Guardiao do Vale", "Guardiao", Vector3(5, 0, 5), Color(0.40, 0.35, 0.30, 1)],
 		["Ferreiro Thorin", "Ferreiro", Vector3(-6, 0, 8), Color(0.45, 0.30, 0.20, 1)],
 		["Mercador Ivan", "Mercador", Vector3(8, 0, -5), Color(0.55, 0.28, 0.12, 1)],
 		["Curandeira Lyra", "Curandeira", Vector3(-7, 0, -6), Color(0.50, 0.45, 0.40, 1)],
@@ -260,15 +275,16 @@ func _spawn_npcs():
 		_npc(nd[2], nd[0], nd[1], nd[3])
 		npc_count += 1
 
-func _npc(pos: Vector3, name: String, title: String, body_color: Color):
-	var n = Node3D.new(); n.name = name.replace(" ", "_"); n.position = pos
+func _npc(pos: Vector3, npc_name: String, title: String, body_color: Color):
+	var n = Node3D.new(); n.name = npc_name.replace(" ", "_"); n.position = pos
+	n.add_to_group("npc")
 	_capsule2(n, 0.45, 1.3, body_color, Vector3(0, 1.5, 0))
 	_sphere2(n, 0.37, Color(0.85, 0.70, 0.55, 1), Vector3(0, 2.4, 0))
 	_capsule2(n, 0.13, 0.85, body_color, Vector3(0.58, 1.6, 0))
 	_capsule2(n, 0.13, 0.85, body_color, Vector3(-0.58, 1.6, 0))
 	_capsule2(n, 0.15, 0.85, Color(0.18, 0.12, 0.06, 1), Vector3(0.22, 0.45, 0))
 	_capsule2(n, 0.15, 0.85, Color(0.18, 0.12, 0.06, 1), Vector3(-0.22, 0.45, 0))
-	var lbl = Label3D.new(); lbl.text = name + "\n" + title
+	var lbl = Label3D.new(); lbl.text = npc_name + "\n" + title
 	lbl.position = Vector3(0, 3.2, 0); lbl.font_size = 26
 	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED; lbl.modulate = Color(1, 0.9, 0.5, 1)
 	n.add_child(lbl)
@@ -394,3 +410,41 @@ func _process(delta):
 		if hp_bar and mhp > 0: hp_bar.size.x = 220 * (hp / mhp)
 	if player and pos_label:
 		pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))
+	if player and not dialog_open:
+		nearest_npc = null
+		var min_dist = 4.0
+		for npc in get_tree().get_nodes_in_group("npc"):
+			var d = player.global_position.distance_to(npc.global_position)
+			if d < min_dist:
+				min_dist = d
+				nearest_npc = npc
+		if interact_hint:
+			interact_hint.text = "[E] Falar" if nearest_npc else ""
+
+func _unhandled_input(event):
+	if event is InputEventKey and event.keycode == KEY_E and event.pressed and not event.echo:
+		if dialog_open:
+			_close_dialog()
+		elif nearest_npc:
+			_open_dialog(nearest_npc)
+
+func _open_dialog(npc: Node3D):
+	dialog_open = true
+	if dialog_panel: dialog_panel.visible = true
+	var npc_display = npc.name.replace("_", " ")
+	if dialog_name_label: dialog_name_label.text = npc_display
+	if dialog_text_label: dialog_text_label.text = npc_dialogs.get(npc.name, "...")
+	if interact_hint: interact_hint.text = ""
+	_advance_quest(npc.name)
+
+func _close_dialog():
+	dialog_open = false
+	if dialog_panel: dialog_panel.visible = false
+
+func _advance_quest(npc_id: String):
+	if npc_id == "Guardiao_do_Vale" and quest_stage == 0:
+		quest_stage = 1
+		if quest_text: quest_text.text = "Missao: Fale com o Ferreiro Thorin"
+	elif npc_id == "Ferreiro_Thorin" and quest_stage <= 1:
+		quest_stage = 2
+		if quest_text: quest_text.text = "Missao: Derrote Vorak, o Antigo"
