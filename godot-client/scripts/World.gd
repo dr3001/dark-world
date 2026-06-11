@@ -77,6 +77,12 @@ func _on_entities(data):
 		var mi = MeshInstance3D.new()
 		var b = BoxMesh.new()
 		if et == "dragon":
+			var dragon_scene = load("res://scenes/models/Dragon.tscn")
+			if dragon_scene:
+				var dragon = dragon_scene.instantiate()
+				dragon.position = Vector3(px, 0, pz)
+				add_child(dragon)
+				return
 			b.size = Vector3(10, 5, 10)
 			mi.mesh = b
 			var m = StandardMaterial3D.new(); m.albedo_color = Color(1, 0, 0)
