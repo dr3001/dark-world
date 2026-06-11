@@ -56,7 +56,10 @@ func _physics_process(delta):
 	
 	move_and_slide()
 	
-	# Animate model
+	if global_position.y < -10:
+		global_position = Vector3(0, 5, 0)
+		velocity = Vector3.ZERO
+	
 	if player_model and player_model.has_method("animate_walk"):
 		player_model.animate_walk(delta, is_moving)
 

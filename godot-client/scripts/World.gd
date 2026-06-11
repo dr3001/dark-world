@@ -16,10 +16,13 @@ func _ready():
 	_build_plaza()
 	_spawn_player()
 	_build_village()
+	_build_walls()
+	_build_rocks()
 	_spawn_npcs()
 	_build_castle()
 	_spawn_dragon()
 	_build_trees()
+	_build_road_torches()
 	
 	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
 	_log("Vale Cinzento — " + str(get_child_count()) + " objetos carregados")
@@ -47,16 +50,18 @@ func _build_plaza():
 
 func _fountain(pos: Vector3):
 	var f = Node3D.new(); f.position = pos
-	# Base pool
 	_cyl(f, 3.5, 0.4, Color(0.55, 0.52, 0.48, 1), Vector3(0, 0.2, 0))
-	# Water disc
+	var sb = StaticBody3D.new(); sb.position = Vector3(0, 0.2, 0)
+	var col = CollisionShape3D.new(); var cs = CylinderShape3D.new(); cs.radius = 3.5; cs.height = 0.8
+	col.shape = cs; sb.add_child(col); f.add_child(sb)
 	var w = MeshInstance3D.new(); var ds = CylinderMesh.new(); ds.top_radius = 3.0; ds.bottom_radius = 3.0; ds.height = 0.1; w.mesh = ds
 	var wm = StandardMaterial3D.new(); wm.albedo_color = Color(0.20, 0.40, 0.70, 0.7); wm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	w.set_surface_override_material(0, wm); w.position = Vector3(0, 0.35, 0); f.add_child(w)
-	# Center pillar
 	_cyl(f, 0.6, 3.0, Color(0.60, 0.58, 0.55, 1), Vector3(0, 1.7, 0))
-	# Top bowl
 	_cyl(f, 1.5, 0.3, Color(0.60, 0.58, 0.55, 1), Vector3(0, 3.2, 0))
+	var light = OmniLight3D.new(); light.position = Vector3(0, 3.5, 0)
+	light.light_color = Color(0.3, 0.5, 0.9); light.light_energy = 2.0; light.omni_range = 8.0
+	f.add_child(light)
 	add_child(f)
 
 func _bench(pos: Vector3, angle: float):
@@ -81,8 +86,8 @@ func _spawn_player():
 	_capsule2(player, 0.14, 0.85, Color(0.12, 0.08, 0.04, 1), Vector3(-0.2, 0.45, 0))
 	# Collision
 	var c = CollisionShape3D.new(); var cs = CapsuleShape3D.new(); cs.radius = 0.5; cs.height = 2.2
-	c.shape = cs; player.add_child(c)
-	player.position = Vector3(0, 2, 0)
+	c.shape = cs; c.position = Vector3(0, 1.1, 0); player.add_child(c)
+	player.position = Vector3(0, 3, 0)
 	var ps = load("res://scripts/PlayerController.gd")
 	if ps: player.set_script(ps)
 	add_child(player)
@@ -118,6 +123,10 @@ func _house(pos: Vector3):
 	var h = Node3D.new(); h.position = pos
 	# Walls
 	_box_on(h, Vector3(7, 5, 6), Color(0.50 + randf() * 0.1, 0.32 + randf() * 0.1, 0.18 + randf() * 0.1, 1), Vector3(0, 2.5, 0))
+	# Collision for walls
+	var sb = StaticBody3D.new(); sb.position = Vector3(0, 2.5, 0)
+	var col = CollisionShape3D.new(); var bs = BoxShape3D.new(); bs.size = Vector3(7, 5, 6)
+	col.shape = bs; sb.add_child(col); h.add_child(sb)
 	# Roof
 	var roof = MeshInstance3D.new(); var pr = PrismMesh.new(); pr.size = Vector3(8, 2.5, 7)
 	roof.mesh = pr
@@ -141,13 +150,14 @@ func _smoke(parent, pos):
 func _well(pos: Vector3):
 	var w = Node3D.new(); w.position = pos
 	_cyl(w, 1.5, 3, Color(0.40, 0.35, 0.30, 1), Vector3(0, 1.5, 0))
+	var sb = StaticBody3D.new(); sb.position = Vector3(0, 1.5, 0)
+	var col = CollisionShape3D.new(); var cs = CylinderShape3D.new(); cs.radius = 1.5; cs.height = 3.0
+	col.shape = cs; sb.add_child(col); w.add_child(sb)
 	_box_on(w, Vector3(3, 0.3, 1), Color(0.35, 0.22, 0.12, 1), Vector3(0, 3.2, 0))
-	# Roof
 	var roof = MeshInstance3D.new(); var pr = PrismMesh.new(); pr.size = Vector3(3.5, 1.5, 2)
 	roof.mesh = pr
 	roof.set_surface_override_material(0, _mat(Color(0.35, 0.14, 0.08, 1)))
 	roof.position = Vector3(0, 4.0, 0); w.add_child(roof)
-	# Support posts
 	_box_on(w, Vector3(0.2, 3, 0.2), Color(0.30, 0.18, 0.10, 1), Vector3(0.8, 2.0, 0.5))
 	_box_on(w, Vector3(0.2, 3, 0.2), Color(0.30, 0.18, 0.10, 1), Vector3(-0.8, 2.0, 0.5))
 	add_child(w)
@@ -170,27 +180,27 @@ func _cart(pos: Vector3):
 func _build_castle():
 	var c = Node3D.new(); c.name = "Castelo"; c.position = Vector3(-60, 0, 40)
 	var stone = Color(0.52, 0.50, 0.46, 1); var dark = Color(0.44, 0.42, 0.38, 1)
-	# Main keep
 	_box_on(c, Vector3(14, 18, 14), stone, Vector3(0, 9, 0))
-	# 4 corner towers
+	_static_box(c, Vector3(14, 18, 14), Vector3(0, 9, 0))
 	for cx in [-9, 9]:
 		for cz in [-9, 9]:
 			_box_on(c, Vector3(5, 22, 5), dark, Vector3(cx, 11, cz))
-			# Tower roof
+			_static_box(c, Vector3(5, 22, 5), Vector3(cx, 11, cz))
 			_cone(c, Vector3(cx, 22.5, cz), 3, 5, Color(0.38, 0.14, 0.08, 1))
-	# Gatehouse
 	_box_on(c, Vector3(7, 10, 4), stone, Vector3(0, 5, 9))
+	_static_box(c, Vector3(7, 10, 4), Vector3(0, 5, 9))
 	_box_on(c, Vector3(4, 7, 1), Color(0.25, 0.18, 0.08, 1), Vector3(0, 3.5, 10.5))
-	# Outer walls
 	for i in range(30):
 		var a = float(i) * PI * 2.0 / 30.0
 		var r = 20.0
 		var w = _box_on(c, Vector3(1, 7, 3), dark, Vector3(cos(a) * r, 3.5, sin(a) * r))
 		w.rotation.y = a + PI / 2.0
-	# Banner
 	var banner = MeshInstance3D.new(); var bp = BoxMesh.new(); bp.size = Vector3(0.1, 5, 2); banner.mesh = bp
 	var bm = StandardMaterial3D.new(); bm.albedo_color = Color(0.80, 0.10, 0.10, 1)
 	banner.set_surface_override_material(0, bm); banner.position = Vector3(0, 20, 0); c.add_child(banner)
+	var castle_light = OmniLight3D.new(); castle_light.position = Vector3(0, 15, 10)
+	castle_light.light_color = Color(1, 0.85, 0.6); castle_light.light_energy = 3.0; castle_light.omni_range = 25.0
+	c.add_child(castle_light)
 	add_child(c)
 
 # ===== DRAGON =====
@@ -281,9 +291,57 @@ func _tree(pos: Vector3, scale: float):
 		_sphere2(t, s * 0.5, Color(0.06, 0.35 + randf() * 0.30, 0.06, 1), Vector3(randf_range(-0.5, 0.5), h + float(j) * 1.5, randf_range(-0.5, 0.5)))
 	add_child(t)
 
+# ===== WALLS =====
+func _build_walls():
+	var wall_color = Color(0.42, 0.38, 0.32, 1)
+	var segments = 40
+	var radius = 120.0
+	var wall_h = 6.0
+	for i in range(segments):
+		var a = float(i) * PI * 2.0 / float(segments)
+		var x = cos(a) * radius
+		var z = sin(a) * radius
+		var w = Node3D.new(); w.position = Vector3(x, 0, z)
+		_box_on(w, Vector3(2, wall_h, 20), wall_color, Vector3(0, wall_h / 2.0, 0))
+		w.rotation.y = a + PI / 2.0
+		var sb = StaticBody3D.new(); sb.position = Vector3(0, wall_h / 2.0, 0)
+		var col = CollisionShape3D.new(); var bs = BoxShape3D.new(); bs.size = Vector3(2, wall_h, 20)
+		col.shape = bs; sb.add_child(col); w.add_child(sb)
+		add_child(w)
+	for i in range(segments):
+		var a = float(i) * PI * 2.0 / float(segments)
+		if i % 5 == 0:
+			var tx = cos(a) * (radius + 1)
+			var tz = sin(a) * (radius + 1)
+			_torch(Vector3(tx, 0, tz))
+
+# ===== ROCKS =====
+func _build_rocks():
+	for i in range(40):
+		var a = randf() * PI * 2.0
+		var r = randf_range(20, 200)
+		var pos = Vector3(cos(a) * r, 0, sin(a) * r)
+		if pos.length() < 15: continue
+		var sz = randf_range(0.5, 3.0)
+		var rock = Node3D.new(); rock.position = pos
+		_sphere2(rock, sz, Color(0.45 + randf() * 0.15, 0.42 + randf() * 0.1, 0.38 + randf() * 0.1, 1), Vector3(0, sz * 0.4, 0))
+		rock.rotation.y = randf() * PI * 2.0
+		add_child(rock)
+
+# ===== ROAD TORCHES =====
+func _build_road_torches():
+	for z in range(-60, 80, 15):
+		_torch(Vector3(4, 0, z))
+		_torch(Vector3(-4, 0, z))
+
 # ===== HELPERS =====
 func _mat(color: Color) -> StandardMaterial3D:
 	var m = StandardMaterial3D.new(); m.albedo_color = color; return m
+
+func _static_box(parent, size: Vector3, pos: Vector3):
+	var sb = StaticBody3D.new(); sb.position = pos
+	var col = CollisionShape3D.new(); var bs = BoxShape3D.new(); bs.size = size
+	col.shape = bs; sb.add_child(col); parent.add_child(sb)
 
 func _sphere2(parent, r, color, pos):
 	var mi = MeshInstance3D.new(); var s = SphereMesh.new(); s.radius = r; s.height = r*2; mi.mesh = s
@@ -316,6 +374,10 @@ func _torch(pos: Vector3):
 	var fm = StandardMaterial3D.new(); fm.albedo_color = Color(1, 0.6, 0.1, 1)
 	fm.emission_enabled = true; fm.emission = Color(1, 0.5, 0); fm.emission_energy_multiplier = 2.0
 	flame.set_surface_override_material(0, fm); flame.position = Vector3(0, 4.5, 0); t.add_child(flame)
+	var light = OmniLight3D.new(); light.position = Vector3(0, 4.5, 0)
+	light.light_color = Color(1, 0.6, 0.2); light.light_energy = 1.5; light.omni_range = 10.0
+	light.shadow_enabled = false
+	t.add_child(light)
 	add_child(t)
 
 func _log(msg: String):
@@ -326,10 +388,9 @@ func _process(delta):
 	if fps_label: fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
 	if obj_label: obj_label.text = "Obj: " + str(get_child_count())
 	if player and hp_text:
-		var pc = player.get_script()
-		var hp = pc.get("hp") if pc and pc.get("hp") != null else 100.0
-		var mhp = pc.get("max_hp") if pc and pc.get("max_hp") != null else 100.0
+		var hp = player.get("hp") if player.get("hp") != null else 100.0
+		var mhp = player.get("max_hp") if player.get("max_hp") != null else 100.0
 		hp_text.text = "HP: " + str(int(hp)) + "/" + str(int(mhp))
-		if hp_bar: hp_bar.size.x = 220 * (hp / mhp)
+		if hp_bar and mhp > 0: hp_bar.size.x = 220 * (hp / mhp)
 	if player and pos_label:
 		pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://world00000000000000001"]
+[gd_scene load_steps=8 format=3 uid="uid://world00000000000000001"]
 
 [ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/CameraController.gd" id="2_camera"]
@@ -9,6 +9,8 @@ size = Vector2(1000, 1000)
 [sub_resource type="StandardMaterial3D" id="mat_ground"]
 albedo_color = Color(0.25, 0.35, 0.18, 1)
 roughness = 0.92
+
+[sub_resource type="WorldBoundaryShape3D" id="ground_col_shape"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.30, 0.50, 0.80, 1)
@@ -54,9 +56,14 @@ directional_shadow_split_2 = 0.3
 environment = SubResource("env_default")
 
 [node name="Ground" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.1, 0)
+position = Vector3(0, -0.05, 0)
 mesh = SubResource("PlaneMesh_ground")
 material_override = SubResource("mat_ground")
+
+[node name="GroundCollision" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundCollision"]
+shape = SubResource("ground_col_shape")
 
 [node name="EntitySpawner" type="Node3D" parent="."]
 
@@ -64,15 +71,15 @@ material_override = SubResource("mat_ground")
 layout_mode = 3
 anchors_preset = 15
 
-[node name="HPBar" type="ColorRect" parent="HUD"]
-position = Vector2(20, 610)
-size = Vector2(220, 18)
-color = Color(0.80, 0.10, 0.10, 1)
-
 [node name="HPBarBG" type="ColorRect" parent="HUD"]
 position = Vector2(18, 608)
 size = Vector2(224, 22)
 color = Color(0.05, 0.05, 0.05, 1)
+
+[node name="HPBar" type="ColorRect" parent="HUD"]
+position = Vector2(20, 610)
+size = Vector2(220, 18)
+color = Color(0.80, 0.10, 0.10, 1)
 
 [node name="ManaBar" type="ColorRect" parent="HUD"]
 position = Vector2(20, 632)
