@@ -30,31 +30,80 @@ func _ready():
 
 func _check_version():
 	_set_status("Verificando atualizacao...")
+	_send_telemetry("launcher_start")
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):
 		if code != 200 or not resp:
 			_set_status("Nao foi possivel verificar atualizacoes. Conecte-se a internet.")
+			_send_telemetry("version_check_failed")
 			return
 		var data = JSON.parse_string(resp.get_string_from_utf8())
 		if not data: return
 		var remote = data.get("game_version", "0")
 		var force = data.get("force_update", false)
+		_send_telemetry("version_checked", {"remote": remote})
 		if remote != LOCAL_VERSION:
 			_set_status("Atualizacao disponivel: v" + str(remote) + " (local: v" + LOCAL_VERSION + ")")
 			if force:
-				_set_status("ATUALIZACAO OBRIGATORIA! Baixe a versao mais recente.")
-				enter_btn.text = "Atualizacao Necessaria"
+				_set_status("ATUALIZACAO OBRIGATORIA! Baixando...")
 				enter_btn.disabled = true
-				create_btn.text = "Baixar v" + str(remote)
-				create_btn.disabled = false
+				create_btn.disabled = true
+				_download_update(data)
 				return
 		_set_status("v" + LOCAL_VERSION + " — Pronto.")
 		enter_btn.disabled = false
 		create_btn.disabled = false
 		_register_device()
+		_send_telemetry("login_gate_passed")
 		http.queue_free()
 	, CONNECT_ONE_SHOT)
 	http.request("http://5.78.142.138:9000/api/launcher/manifest")
+
+func _download_update(manifest_data):
+	var files = manifest_data.get("manifest", {}).get("files", manifest_data.get("files", []))
+	var platform = "windows" if OS.get_name().to_lower().find("windows") >= 0 else "macos"
+	var file_data = null
+	for f in files:
+		if f.get("platform", "") == platform: file_data = f; break
+	if not file_data:
+		_set_status("Nenhum pacote encontrado para " + platform)
+		return
+	var url = "https://dark.zorionlabs.net" + file_data.get("url", "")
+	var sha_expected = file_data.get("sha256", "")
+	_set_status("Baixando " + str(int(file_data.get("size",0))/1024/1024) + "MB...")
+	_send_telemetry("update_download_start")
+	var dl = HTTPRequest.new(); add_child(dl)
+	dl.download_file = OS.get_user_data_dir() + "/update_download.bin"
+	dl.request_completed.connect(func(_r, code, _h, _b):
+		if code != 200:
+			_set_status("Falha no download. Tente novamente.")
+			_send_telemetry("update_download_failed")
+			return
+		_send_telemetry("update_download_complete")
+		_set_status("Validando SHA256...")
+		var f = FileAccess.open(OS.get_user_data_dir() + "/update_download.bin", FileAccess.READ)
+		var actual_sha = f.get_sha256() if f else ""
+		if actual_sha.to_lower() != sha_expected.to_lower():
+			_set_status("SHA256 invalido! Download corrompido.")
+			_send_telemetry("hash_validation_failed")
+			return
+		_send_telemetry("update_applied")
+		_set_status("Atualizacao concluida! Reinicie o jogo.")
+		dl.queue_free()
+	, CONNECT_ONE_SHOT)
+	dl.request(url)
+
+func _send_telemetry(action: String, extra: Dictionary = {}):
+	var http = HTTPRequest.new(); add_child(http)
+	http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
+	http.request("http://5.78.142.138:9000/api/launcher/update-report", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({
+		"user_id": current_account_id if current_account_id != "" else null,
+		"platform": OS.get_name(),
+		"action": action,
+		"version": LOCAL_VERSION,
+		"status": "ok",
+		"details": extra
+	}))
 
 func _register_device():
 	var http = HTTPRequest.new(); add_child(http)
