@@ -14,7 +14,7 @@ var tooltip_node = null; var inv_system = null; var combat_sys = null
 var loot_sys = null; var save_indicator: Label = null
 var equipment_panel_node: ColorRect; var journal_panel_node: ColorRect
 var character_id: String = ""; var auto_save_timer: float = 0.0
-var net = null
+var net = null; var chat_display = null; var chat_panel_node: ColorRect
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -72,6 +72,11 @@ func _ready():
 	var NetScript = load("res://scripts/NetworkClient.gd")
 	if NetScript:
 		net = NetScript.new(); net.name = "NetClient"; add_child(net)
+	chat_panel_node = get_node_or_null("HUD/ChatPanel")
+	var ChatScript = load("res://scripts/ChatDisplay.gd")
+	if ChatScript:
+		chat_display = ChatScript.new(); add_child(chat_display)
+		chat_display.setup(chat_panel_node)
 	cam = $Camera3D
 	
 	_build_plaza()

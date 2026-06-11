@@ -296,6 +296,177 @@ addRoute("POST", "/npcs/([^/]+)/memory", async (req, res, matches) => {
   json(res, { recorded: true }, 201);
 });
 
+// ===== PLATFORM GAMMA =====
+
+addRoute("GET", "/store/products", async (_req, res) => {
+  const r = await query("SELECT p.*, c.name as category FROM store_products p JOIN store_categories c ON p.category_id = c.id ORDER BY c.sort_order, p.name");
+  json(res, { products: r.rows, mode: "sandbox" });
+});
+
+addRoute("POST", "/store/checkout/create", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id || !b.product_id) return json(res, { error: "user_id and product_id required" }, 400);
+  const product = await query("SELECT * FROM store_products WHERE id = $1", [b.product_id]);
+  if (!product.rows[0]) return json(res, { error: "Product not found" }, 404);
+  json(res, { mode: "sandbox", message: "Stripe not active. Purchase pending.", product: product.rows[0] });
+});
+
+addRoute("POST", "/store/webhook/stripe", async (req, res) => {
+  const b = await body(req);
+  await query("INSERT INTO webhook_logs (event_type, stripe_event_id, payload) VALUES ($1,$2,$3)", [b.type || "unknown", b.id || "sandbox", JSON.stringify(b)]);
+  json(res, { received: true, mode: "sandbox" });
+});
+
+addRoute("POST", "/chat/send", async (req, res) => {
+  const b = await body(req);
+  if (!b.message) return json(res, { error: "message required" }, 400);
+  const r = await query("INSERT INTO chat_messages (user_id, character_id, display_name, vip_level, role, message, channel) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *",
+    [b.user_id || null, b.character_id || null, b.display_name || "Anonimo", b.vip_level || 0, b.role || "player", b.message, b.channel || "global"]);
+  json(res, { message: r.rows[0] }, 201);
+});
+
+addRoute("GET", "/chat/recent", async (_req, res) => {
+  const r = await query("SELECT * FROM chat_messages WHERE channel = 'global' AND moderation_status = 'ok' ORDER BY created_at DESC LIMIT 30");
+  json(res, { messages: r.rows.reverse() });
+});
+
+addRoute("GET", "/chat/([^/]+)", async (_req, res, matches) => {
+  const r = await query("SELECT * FROM chat_messages WHERE channel = $1 AND moderation_status = 'ok' ORDER BY created_at DESC LIMIT 30", [matches[1]]);
+  json(res, { messages: r.rows.reverse() });
+});
+
+addRoute("GET", "/clans", async (_req, res) => {
+  json(res, { clans: (await query("SELECT * FROM clans ORDER BY member_count DESC LIMIT 50")).rows });
+});
+
+addRoute("POST", "/clans/create", async (req, res) => {
+  const b = await body(req);
+  if (!b.name || !b.tag || !b.leader_user_id) return json(res, { error: "name, tag, leader_user_id required" }, 400);
+  const clan = await query("INSERT INTO clans (name, tag, description, leader_user_id) VALUES ($1,$2,$3,$4) RETURNING *", [b.name, b.tag, b.description || "", b.leader_user_id]);
+  await query("INSERT INTO clan_members (clan_id, user_id, role) VALUES ($1,$2,'leader')", [clan.rows[0].id, b.leader_user_id]);
+  json(res, { clan: clan.rows[0] }, 201);
+});
+
+addRoute("POST", "/clans/([^/]+)/join", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  await query("INSERT INTO clan_members (clan_id, user_id, role) VALUES ($1,$2,'member') ON CONFLICT DO NOTHING", [matches[1], b.user_id]);
+  await query("UPDATE clans SET member_count = member_count + 1 WHERE id = $1", [matches[1]]);
+  json(res, { joined: true });
+});
+
+addRoute("POST", "/clans/([^/]+)/leave", async (req, res, matches) => {
+  const b = await body(req);
+  await query("DELETE FROM clan_members WHERE clan_id = $1 AND user_id = $2", [matches[1], b.user_id]);
+  await query("UPDATE clans SET member_count = GREATEST(member_count - 1, 0) WHERE id = $1", [matches[1]]);
+  json(res, { left: true });
+});
+
+addRoute("GET", "/clans/([^/]+)/members", async (_req, res, matches) => {
+  const r = await query("SELECT cm.*, ap.display_name FROM clan_members cm JOIN accounts_profile ap ON cm.user_id = ap.id WHERE cm.clan_id = $1 ORDER BY cm.role, cm.joined_at", [matches[1]]);
+  json(res, { members: r.rows });
+});
+
+addRoute("GET", "/rankings/global", async (_req, res) => {
+  const r = await query("SELECT re.*, ap.display_name FROM ranking_entries re JOIN accounts_profile ap ON re.user_id = ap.id WHERE re.ranking_type = 'xp' ORDER BY re.score DESC LIMIT 50");
+  json(res, { rankings: r.rows });
+});
+
+addRoute("GET", "/rankings/season", async (_req, res) => {
+  const season = await query("SELECT * FROM ranking_seasons WHERE status = 'active' LIMIT 1");
+  if (!season.rows[0]) return json(res, { rankings: [], season: null });
+  const r = await query("SELECT re.*, ap.display_name FROM ranking_entries re JOIN accounts_profile ap ON re.user_id = ap.id WHERE re.season_id = $1 ORDER BY re.score DESC LIMIT 50", [season.rows[0].id]);
+  json(res, { rankings: r.rows, season: season.rows[0] });
+});
+
+addRoute("GET", "/rankings/clans", async (_req, res) => {
+  json(res, { rankings: (await query("SELECT * FROM clans ORDER BY level DESC, member_count DESC LIMIT 50")).rows });
+});
+
+addRoute("GET", "/vip/levels", async (_req, res) => {
+  json(res, { levels: (await query("SELECT * FROM vip_levels ORDER BY level")).rows });
+});
+
+addRoute("GET", "/characters/([^/]+)/vip", async (_req, res, matches) => {
+  const chr = await query("SELECT account_id FROM characters WHERE id = $1", [matches[1]]);
+  if (!chr.rows[0]) return json(res, { vip: null });
+  const vip = await query("SELECT uv.*, vl.name, vl.badge, vl.color FROM user_vip uv JOIN vip_levels vl ON uv.vip_level = vl.level WHERE uv.user_id = $1 AND uv.status = 'active' ORDER BY uv.vip_level DESC LIMIT 1", [chr.rows[0].account_id]);
+  json(res, { vip: vip.rows[0] || null });
+});
+
+addRoute("POST", "/admin/grant-zorium", async (req, res) => {
+  const b = await body(req);
+  if (!b.character_id || !b.amount) return json(res, { error: "character_id and amount required" }, 400);
+  const amt = parseFloat(b.amount as string);
+  await query("UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE character_id = $2", [amt, b.character_id]);
+  await query("UPDATE character_stats SET zorium = zorium + $1, updated_at = NOW() WHERE character_id = $2", [amt, b.character_id]);
+  const uid = (await query("SELECT account_id FROM characters WHERE id = $1", [b.character_id])).rows[0]?.account_id;
+  await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,$3,'admin_grant','admin',$4,$5)", [uid, b.character_id, amt, b.reason || "Admin grant", b.granted_by || "system"]);
+  json(res, { granted: amt });
+});
+
+addRoute("POST", "/admin/ban", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id || !b.ban_type) return json(res, { error: "user_id and ban_type required" }, 400);
+  await query("INSERT INTO ban_records (user_id, staff_id, ban_type, reason, expires_at) VALUES ($1,$2,$3,$4,$5)", [b.user_id, b.staff_id || null, b.ban_type, b.reason || "", b.expires_at || null]);
+  await query("UPDATE accounts_profile SET is_banned = true, status = 'banned' WHERE id = $1", [b.user_id]);
+  json(res, { banned: true });
+});
+
+addRoute("POST", "/admin/unban", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  await query("UPDATE ban_records SET is_active = false WHERE user_id = $1", [b.user_id]);
+  await query("UPDATE accounts_profile SET is_banned = false, status = 'active' WHERE id = $1", [b.user_id]);
+  json(res, { unbanned: true });
+});
+
+addRoute("POST", "/admin/announce", async (req, res) => {
+  const b = await body(req);
+  if (!b.title || !b.message) return json(res, { error: "title and message required" }, 400);
+  const r = await query("INSERT INTO server_announcements (title, message, priority, created_by) VALUES ($1,$2,$3,$4) RETURNING *", [b.title, b.message, b.priority || 5, b.created_by || "system"]);
+  json(res, { announcement: r.rows[0] }, 201);
+});
+
+addRoute("GET", "/events/active", async (_req, res) => {
+  json(res, { events: (await query("SELECT * FROM game_events WHERE status = 'active' ORDER BY starts_at")).rows });
+});
+
+addRoute("GET", "/events/calendar", async (_req, res) => {
+  const events = (await query("SELECT id, name, event_type, starts_at, ends_at, status FROM game_events ORDER BY starts_at")).rows;
+  const maintenance = (await query("SELECT * FROM scheduled_maintenance WHERE status IN ('scheduled','active') ORDER BY starts_at")).rows;
+  const announcements = (await query("SELECT * FROM server_announcements WHERE expires_at > NOW() ORDER BY priority DESC")).rows;
+  json(res, { events, maintenance, announcements });
+});
+
+addRoute("GET", "/characters/([^/]+)/profile", async (_req, res, matches) => {
+  await query("INSERT INTO player_profiles (user_id) SELECT account_id FROM characters WHERE id = $1 ON CONFLICT (user_id) DO NOTHING", [matches[1]]);
+  const r = await query("SELECT pp.*, c.character_name, cs.level, cs.xp, cs.zorium, ap.display_name, ap.role, ap.vip_level FROM player_profiles pp JOIN characters c ON pp.character_id = c.id OR pp.user_id = c.account_id JOIN character_stats cs ON cs.character_id = c.id JOIN accounts_profile ap ON ap.id = pp.user_id WHERE c.id = $1 LIMIT 1", [matches[1]]);
+  json(res, { profile: r.rows[0] || null });
+});
+
+addRoute("GET", "/characters/([^/]+)/titles", async (_req, res) => {
+  json(res, { titles: (await query("SELECT * FROM player_titles ORDER BY rarity")).rows });
+});
+
+addRoute("GET", "/auth/login-history/([^/]+)", async (_req, res, matches) => {
+  json(res, { history: (await query("SELECT * FROM login_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50", [matches[1]])).rows });
+});
+
+addRoute("POST", "/npcs/([^/]+)/chat", async (req, res, matches) => {
+  const b = await body(req);
+  const npcRole = matches[1];
+  const msg = (b.message as string) || "";
+  const charId = (b.character_id as string) || "";
+  const fallbacks: Record<string, string> = { blacksmith:"Posso forjar armas.", healer:"Posso curar feridas.", guard:"Mantenha-se atento.", merchant:"Tenho mercadorias.", villager:"A vida era tranquila.", guardian:"Vorak voltou." };
+  json(res, { reply: fallbacks[npcRole] || "...", mode: process.env.AI_API_KEY ? "ai" : "static" });
+});
+
+addRoute("GET", "/wallet/([^/]+)/ledger", async (_req, res, matches) => {
+  const r = await query("SELECT * FROM zorium_ledger WHERE character_id = $1 ORDER BY created_at DESC LIMIT 50", [matches[1]]);
+  json(res, { ledger: r.rows });
+});
+
 // ===== ROUTER =====
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }
