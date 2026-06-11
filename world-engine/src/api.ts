@@ -502,10 +502,23 @@ addRoute("GET", "/auth/login-history/([^/]+)", async (_req, res, matches) => {
 addRoute("POST", "/npcs/([^/]+)/chat", async (req, res, matches) => {
   const b = await body(req);
   const npcRole = matches[1];
-  const msg = (b.message as string) || "";
-  const charId = (b.character_id as string) || "";
-  const fallbacks: Record<string, string> = { blacksmith:"Posso forjar armas.", healer:"Posso curar feridas.", guard:"Mantenha-se atento.", merchant:"Tenho mercadorias.", villager:"A vida era tranquila.", guardian:"Vorak voltou." };
-  json(res, { reply: fallbacks[npcRole] || "...", mode: process.env.AI_API_KEY ? "ai" : "static" });
+  const msg = (b.message as string) || "Ola";
+  const npcInfo = (await query("SELECT * FROM npc_lore WHERE npc_name ILIKE $1", ["%" + npcRole.replace(/_/g, " ") + "%"])).rows[0];
+  const fallbacks: Record<string, string> = { blacksmith:"Posso forjar armas de ferro e aço. O que precisa?", healer:"Posso curar suas feridas. Use [C] para se curar por 5 Zorium.", guard:"Mantenha-se atento aos perigos da regiao. Vorak esta proximo.", merchant:"Tenho mercadorias para viajantes. Zorium e bem-vindo.", villager:"A vida era mais tranquila antes de Vorak. Tome cuidado.", guardian:"O dragao Vorak ameaca o Vale. Fale com a curandeira para aceitar a missao." };
+  if (process.env.AI_API_KEY && process.env.AI_ENDPOINT) {
+    try {
+      const systemPrompt = `Voce e um NPC do jogo Dark World. Seu papel: ${npcInfo?.role || npcRole}. ${npcInfo?.biography || ""}. Regras: responda em portugues, maximo 3 frases, nao invente itens que nao existem, nao prometa pagamentos, nao de comandos admin. Seja imersivo e medieval.`;
+      const aiRes = await fetch(process.env.AI_ENDPOINT + "/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + process.env.AI_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: process.env.AI_MODEL || "deepseek-chat", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: msg }], max_tokens: 120, temperature: 0.7 })
+      });
+      const aiData = await aiRes.json() as any;
+      const reply = aiData?.choices?.[0]?.message?.content || fallbacks[npcRole] || "...";
+      return json(res, { reply, mode: "ai", model: process.env.AI_MODEL });
+    } catch {}
+  }
+  json(res, { reply: fallbacks[npcRole] || "...", mode: "static" });
 });
 
 addRoute("GET", "/wallet/([^/]+)/ledger", async (_req, res, matches) => {
@@ -529,6 +542,20 @@ addRoute("POST", "/auth/register-email", async (req, res) => {
   await query("INSERT INTO email_verifications (user_id,token,email) VALUES ($1,$2,$3)", [user.id, token, b.email]);
   await query("INSERT INTO login_history (user_id,ip,success) VALUES ($1,$2,true)", [user.id, (req.headers["x-forwarded-for"] as string) || "unknown"]);
   await query("INSERT INTO security_logs (user_id,action,ip,risk_level) VALUES ($1,'register',$2,'low')", [user.id, (req.headers["x-forwarded-for"] as string) || "unknown"]);
+  if (process.env.BREVO_API_KEY) {
+    try {
+      await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "api-key": process.env.BREVO_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: { name: process.env.BREVO_SENDER_NAME || "Dark World", email: process.env.BREVO_SENDER || "noreply@zorionlabs.net" },
+          to: [{ email: b.email, name: b.display_name }],
+          subject: "Dark World — Verify your email",
+          htmlContent: `<p>Welcome to Dark World, ${b.display_name}!</p><p><a href='https://dark.zorionlabs.net/verify?token=${token}'>Click here to verify your email</a></p>`
+        })
+      });
+    } catch {}
+  }
   json(res, { user, verification_token: token, brevo: process.env.BREVO_API_KEY ? "configured" : "not_configured" }, 201);
 });
 
