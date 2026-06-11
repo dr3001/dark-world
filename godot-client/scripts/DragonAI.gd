@@ -108,9 +108,21 @@ func take_damage(amount: float):
 	print("[AI] Dragon took ", amount, " damage. HP: ", hp, "/", max_hp)
 	
 	# Flash red
-	modulate = Color(1, 0.3, 0.3)
-	await get_tree().create_timer(0.1).timeout
-	modulate = Color(1, 1, 1)
+	# Flash handled via material
+var model = get_node_or_null("DragonModel")
+	if model:
+		for c in model.get_children():
+			if c is MeshInstance3D:
+				var mat = c.get_surface_override_material(0)
+				if mat: mat.albedo_color = Color(1, 0.2, 0.2)
+	await get_tree().create_timer(0.2).timeout
+	# Flash reset
+var model2 = get_node_or_null("DragonModel")
+	if model2:
+		for c in model2.get_children():
+			if c is MeshInstance3D:
+				var mat = c.get_surface_override_material(0)
+				if mat: mat.albedo_color = Color(0.6, 0.1, 0.1)
 	
 	if hp <= 0:
 		_die()

@@ -43,7 +43,7 @@ environment = SubResource("env_default")
 [node name="Ground" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
-surface_material_override/0 = SubResource("mat_ground")
+material_override = SubResource("mat_ground")
 
 [node name="TerrainBuilder" type="Node3D" parent="."]
 
