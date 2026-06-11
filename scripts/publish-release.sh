@@ -7,7 +7,17 @@ GODOT="/opt/godot/godot_4.6.3/Godot_v4.6.3-stable_linux.x86_64"
 PROJECT="/opt/darkworld/godot-client"
 BUILD="/opt/darkworld/build"
 DOWNLOADS="/var/www/zorionlabs/dark/downloads"
-VERSION="${1:-5.0.1}"
+echo "[1/8] Updating version from version.json..."
+VERSION="${1:-$(python3 -c 'import json; print(json.load(open("/opt/darkworld/version.json"))["game_version"])' 2>/dev/null || echo '5.0.5')}"
+echo "  Version: $VERSION"
+
+# Sync LOCAL_VERSION in Main.gd
+sed -i "s/const LOCAL_VERSION = \"[0-9.]*\"/const LOCAL_VERSION = \"$VERSION\"/" "$PROJECT/scripts/Main.gd"
+echo "  Main.gd LOCAL_VERSION synced to $VERSION"
+
+# Sync portal HTML
+sed -i "s/v[0-9]\.[0-9]\.[0-9]/v$VERSION/g" /var/www/zorionlabs/dark/index.html
+echo "  Portal HTML synced to v$VERSION"
 COMMIT=$(git -C /opt/darkworld rev-parse --short HEAD)
 
 echo "============================================"
