@@ -29,13 +29,30 @@ offset_right = 1280
 offset_bottom = 175
 horizontal_alignment = 1
 
-[node name="EnterButton" type="Button" parent="."]
-text = "Entrar"
+[node name="EmailInput" type="LineEdit" parent="."]
+placeholder_text = "Email"
 layout_mode = 0
 offset_left = 440
-offset_top = 300
+offset_top = 210
 offset_right = 840
-offset_bottom = 350
+offset_bottom = 245
+
+[node name="PasswordInput" type="LineEdit" parent="."]
+placeholder_text = "Senha"
+secret = true
+layout_mode = 0
+offset_left = 440
+offset_top = 255
+offset_right = 840
+offset_bottom = 290
+
+[node name="EnterButton" type="Button" parent="."]
+text = "Login"
+layout_mode = 0
+offset_left = 440
+offset_top = 310
+offset_right = 840
+offset_bottom = 360
 
 [node name="CreateAccountButton" type="Button" parent="."]
 text = "Criar Conta"

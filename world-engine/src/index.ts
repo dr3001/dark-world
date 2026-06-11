@@ -26,6 +26,7 @@ import { AuthRealModule } from "./modules/auth/AuthRealModule.js";
 import { FriendsModule } from "./modules/friends/FriendsModule.js";
 import { MultiplayerModule } from "./modules/multiplayer/MultiplayerModule.js";
 import { SecurityLogModule } from "./modules/security/SecurityLogModule.js";
+import { WorldSimulationModule } from "./modules/world/WorldSimulationModule.js";
 import { handleRequest } from "./api.js";
 import { createServer } from "http";
 import { config } from "./config.js";
@@ -67,6 +68,7 @@ async function main() {
   engine.registerModule(new FriendsModule());
   engine.registerModule(new MultiplayerModule());
   engine.registerModule(new SecurityLogModule());
+  engine.registerModule(new WorldSimulationModule());
 
   engine.eventEngine.registerHandler("CHARACTER_DIED", (e) => deathMod.handleDeath(e));
   engine.eventEngine.registerHandler("AFTERLIFE_ENTERED", (e) => afterlifeMod.handleAfterlifeEntered(e));

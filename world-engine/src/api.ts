@@ -645,6 +645,37 @@ addRoute("GET", "/clans/([^/]+)/logs", async (_req, res, matches) => {
   json(res, { logs: (await query("SELECT cl.*,ap.display_name FROM clan_logs cl LEFT JOIN accounts_profile ap ON cl.user_id=ap.id WHERE cl.clan_id=$1 ORDER BY cl.created_at DESC LIMIT 50", [matches[1]])).rows });
 });
 
+addRoute("GET", "/world/state", async (_req, res) => {
+  const wid = KNOWN_UUIDS.WORLD_LIVING;
+  const time = (await query("SELECT * FROM world_time WHERE world_id = $1", [wid])).rows[0];
+  const weather = (await query("SELECT * FROM world_weather WHERE world_id = $1", [wid])).rows[0];
+  json(res, { time, weather });
+});
+
+addRoute("GET", "/world/time", async (_req, res) => {
+  json(res, { time: (await query("SELECT * FROM world_time WHERE world_id = $1", [KNOWN_UUIDS.WORLD_LIVING])).rows[0] });
+});
+
+addRoute("GET", "/world/weather", async (_req, res) => {
+  json(res, { weather: (await query("SELECT * FROM world_weather WHERE world_id = $1", [KNOWN_UUIDS.WORLD_LIVING])).rows[0] });
+});
+
+addRoute("POST", "/admin/force-weather", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  if (!b.state) return json(res, { error: "state required" }, 400);
+  await query("UPDATE world_weather SET state=$1, updated_at=NOW() WHERE world_id=$2", [b.state, KNOWN_UUIDS.WORLD_LIVING]);
+  json(res, { forced: b.state });
+});
+
+addRoute("POST", "/admin/force-time", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  if (b.hour === undefined) return json(res, { error: "hour required" }, 400);
+  await query("UPDATE world_time SET hour=$1, updated_at=NOW() WHERE world_id=$2", [b.hour, KNOWN_UUIDS.WORLD_LIVING]);
+  json(res, { forced_hour: b.hour });
+});
+
 addRoute("GET", "/admin/security-logs", async (req, res) => {
   const b = await body(req);
   if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);

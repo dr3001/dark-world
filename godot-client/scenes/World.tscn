@@ -201,6 +201,16 @@ text = "Online: 0"
 position = Vector2(1100, 50)
 modulate = Color(0.4, 1, 0.5, 1)
 
+[node name="TimeLabel" type="Label" parent="HUD"]
+text = "12:00 Verao"
+position = Vector2(1100, 70)
+modulate = Color(1, 0.9, 0.5, 1)
+
+[node name="WeatherLabel" type="Label" parent="HUD"]
+text = "Ensolarado 22°C"
+position = Vector2(1100, 90)
+modulate = Color(0.7, 0.85, 1, 1)
+
 [node name="ChatPanel" type="ColorRect" parent="HUD"]
 position = Vector2(10, 350)
 size = Vector2(400, 160)

@@ -105,3 +105,14 @@ func record_npc_memory(npc_entity_id: String, char_id: String, memory_type: Stri
 func spend_zorium(char_id: String, amount: float, description: String, callback: Callable):
 	var b = JSON.stringify({"amount": amount, "description": description})
 	_make_request(SERVER_URL + "/characters/" + char_id + "/spend", callback, "spend", HTTPClient.METHOD_POST, b)
+
+func auth_login(email: String, password: String, callback: Callable):
+	var b = JSON.stringify({"email": email, "password": password})
+	_make_request(SERVER_URL + "/auth/login", callback, "auth_login", HTTPClient.METHOD_POST, b)
+
+func auth_register_email(email: String, password: String, display_name: String, callback: Callable):
+	var b = JSON.stringify({"email": email, "password": password, "display_name": display_name})
+	_make_request(SERVER_URL + "/auth/register-email", callback, "auth_register", HTTPClient.METHOD_POST, b)
+
+func get_character_by_account(acc_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + acc_id, callback, "get_char")
