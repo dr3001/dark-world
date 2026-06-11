@@ -3,8 +3,14 @@
 BuildInfo.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
 export_presets.cfg::TextFile::-1::1781133180::0::1::::<><><>0<>0<><>::
 Version.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
-::res://assets/::1781125096
+::res://assets/::1781141985
 ::res://assets/placeholder/::1781125096
+::res://assets/quaternius/::1781141985
+::res://assets/quaternius/buildings/::1781141985
+::res://assets/quaternius/characters/::1781141985
+::res://assets/quaternius/creatures/::1781141985
+::res://assets/quaternius/nature/::1781141985
+::res://assets/quaternius/props/::1781141985
 ::res://docs/::1781125164
 GODOT_IMPORT_COMPATIBILITY.md::TextFile/TextFile::-1::1781125164::0::1::::<><><>0<>0<><>::
 ::res://scenes/::1781141471
@@ -21,7 +27,7 @@ TestLoader.tscn::PackedScene::-1::1781137806::0::1::::<><><>0<>0<><>::res://scri
 Afterlife.gd::GDScript::6352262381114264116::1781137106::0::1::::<>Node3D<><>0<>0<><>::
 CameraController.gd::GDScript::497302004675368759::1781141253::0::1::::<>Camera3D<><>0<>0<><>::
 DragonAI.gd::GDScript::7231944850016780473::1781141471::0::1::::<>Node3D<><>0<>0<><>::
-DragonModel.gd::GDScript::6616762383208143857::1781140729::0::1::::<>Node3D<><>0<>0<><>::
+DragonModel.gd::GDScript::6616762383208143857::1781142163::0::1::::<>Node3D<><>0<>0<><>::
 EntitySpawner.gd::GDScript::4937932370922056492::1781140400::0::1::::<>Node3D<><>0<>0<><>::
 Login.gd::GDScript/GDScript::2002325495387703996::1781125341::0::1::::<>Control<><>0<>0<><>::
 Main.gd::GDScript::6257277512269646831::1781131930::0::1::::<>Control<><>0<>0<><>::
