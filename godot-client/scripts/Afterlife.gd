@@ -1,27 +1,15 @@
 extends Node3D
 
-# Dark World — Afterlife Scene (Mundo Congelado)
-
-var network: NetworkClient
-
-const WORLD_SCENE = "res://scenes/World.tscn"
-
 func _ready():
-	var label = $HUD/AfterlifeLabel
-	if label:
-		label.text = "Voce despertou no Mundo Congelado.\nAguarde o retorno ou pressione R."
+	print("[AFTERLIFE] _ready() — Mundo Congelado carregado")
 	
-	var return_btn = $HUD/ReturnButton
+	var return_btn = get_node_or_null("HUD/ReturnButton")
 	if return_btn:
-		return_btn.pressed.connect(_on_return_pressed)
+		print("[AFTERLIFE] ReturnButton found, connecting...")
+		return_btn.pressed.connect(_on_return)
+	else:
+		print("[AFTERLIFE] ReturnButton NOT found!")
 
-func _on_return_pressed():
-	get_tree().change_scene_to_file(WORLD_SCENE)
-
-func _input(event):
-	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_R:
-			get_tree().change_scene_to_file(WORLD_SCENE)
-		if event.keycode == KEY_K:
-			# Also allow death from here (for testing)
-			pass
+func _on_return():
+	print("[AFTERLIFE] Return requested — voltando ao Mundo dos Vivos")
+	get_tree().change_scene_to_file("res://scenes/World.tscn")

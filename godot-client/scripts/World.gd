@@ -1,151 +1,106 @@
 extends Node3D
 
-var network: Node
-var current_entity_id: String = ""
-var current_world_id: String = "a0000000-0000-0000-0000-000000000001"
-var player_node: CharacterBody3D
-var entities_cache: Array = []
-var event_log: RichTextLabel
-
 func _ready():
-	print("[World] _ready() START")
+	print("[WORLD] _ready() START")
 	
-	event_log = $"HUD/EventLog"
-	print("[World] event_log=", event_log != null)
-	
+	# Load NetworkClient
 	var ns = load("res://scripts/NetworkClient.gd")
-	network = ns.new()
-	network.name = "NetworkClient"
-	add_child(network)
-	print("[World] network added, calling _load_world()")
+	if ns:
+		var net = ns.new()
+		net.name = "DiagNetwork"
+		add_child(net)
+		print("[WORLD] Network loaded")
+		
+		# Check camera
+		var cam = $Camera3D
+		print("[WORLD] Camera found: ", cam != null, " current: ", cam.current if cam else "N/A")
+		print("[WORLD] Camera pos: ", cam.global_position if cam else "N/A")
+		
+		# Spawn player
+		var player = CharacterBody3D.new()
+		player.name = "Player"
+		var mesh = MeshInstance3D.new()
+		var box = BoxMesh.new()
+		box.size = Vector3(1, 2, 1)
+		mesh.mesh = box
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = Color(0.2, 0.8, 0.2)
+		mesh.set_surface_override_material(0, mat)
+		player.add_child(mesh)
+		var coll = CollisionShape3D.new()
+		var cshape = BoxShape3D.new()
+		cshape.size = Vector3(1, 2, 1)
+		coll.shape = cshape
+		player.add_child(coll)
+		player.position = Vector3(0, 2, 0)
+		var ps = load("res://scripts/PlayerController.gd")
+		if ps: player.set_script(ps)
+		add_child(player)
+		print("[WORLD] Player spawned at: ", player.global_position)
+		
+		# Force camera to look at (0,0,0) where geometry is
+		if cam:
+			cam.look_at(Vector3(0, 0, 0))
+			print("[WORLD] Camera looking at origin")
+		
+		# Connect HUD buttons
+		var kb = get_node_or_null("HUD/DebugPanel/KillButton")
+		var rb = get_node_or_null("HUD/DebugPanel/ReturnButton")
+		if kb: kb.pressed.connect(func(): print("[WORLD] KILL"))
+		if rb: rb.pressed.connect(func(): print("[WORLD] RETURN"))
+		
+		# Load world entities
+		net.get_entities("a0000000-0000-0000-0000-000000000001", _on_entities)
+		net.get_dragons(_on_dragons)
+		print("[WORLD] HTTP requests sent")
+	else:
+		print("[WORLD] ERROR: NetworkClient script not found!")
 	
-	var kb = $"HUD/DebugPanel/KillButton"
-	var rb = $"HUD/DebugPanel/ReturnButton"
-	print("[World] kill_btn=", kb != null, " return_btn=", rb != null)
-	if kb: kb.pressed.connect(func(): _on_kill())
-	if rb: rb.pressed.connect(func(): _on_return())
+	# Verify scene has visible geometry
+	await get_tree().process_frame
+	var meshes = []
+	_find_meshes(self, meshes)
+	print("[WORLD] Total MeshInstance3D in scene: ", meshes.size())
+	for m in meshes:
+		print("[WORLD]   ", m.get_path(), " mesh=", m.mesh, " visible=", m.visible)
 	
-	print("[World] spawning player...")
-	_spawn_player()
-	print("[World] player spawned, loading world...")
-	_load_world()
-	print("[World] _ready() DONE")
+	print("[WORLD] _ready() DONE")
 
-func _spawn_player():
-	print("[World] _spawn_player() START")
-	player_node = CharacterBody3D.new()
-	var mesh = MeshInstance3D.new()
-	var cyl = CylinderMesh.new()
-	cyl.height = 2.0; cyl.radius = 0.5
-	mesh.mesh = cyl
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.2, 0.3, 0.8)
-	mesh.set_surface_override_material(0, mat)
-	var coll = CollisionShape3D.new()
-	var cshape = CylinderShape3D.new()
-	cshape.height = 2.0; cshape.radius = 0.5
-	coll.shape = cshape
-	player_node.add_child(mesh)
-	player_node.add_child(coll)
-	player_node.position = Vector3(0, 1, 0)
-	var ps = load("res://scripts/PlayerController.gd")
-	print("[World] PlayerController script loaded=", ps != null)
-	if ps:
-		player_node.set_script(ps)
-	add_child(player_node)
-	print("[World] _spawn_player() DONE, player at ", player_node.position)
-
-func _load_world():
-	print("[World] _load_world() network exists=", network != null)
-	if not network:
-		print("[World] ERROR: network is null!")
-		return
-	_log("Carregando mundo...")
-	print("[World] calling get_entities for world_id=", current_world_id)
-	network.get_entities(current_world_id, _on_entities)
-	print("[World] calling get_dragons")
-	network.get_dragons(_on_dragons)
-	print("[World] _load_world() DONE, waiting for callbacks...")
 
 func _on_entities(data):
-	print("[World] _on_entities() called, data type=", typeof(data), " data=", data)
-	if data == null:
-		_log("ERRO: resposta nula do servidor!")
+	if data == null or not data is Dictionary or not data.has("entities"):
 		return
-	if not data is Dictionary:
-		_log("ERRO: resposta nao e Dictionary: " + str(typeof(data)))
-		return
-	if not data.has("entities"):
-		_log("ERRO: sem campo entities na resposta: " + str(data.keys()))
-		return
-	entities_cache = data["entities"]
-	_log("Entidades carregadas: " + str(entities_cache.size()))
-	print("[World] entities_cache size=", entities_cache.size())
-	for entity in entities_cache:
-		print("[World] spawning entity: ", entity.get("entity_type"), entity.get("name"))
-		_spawn_entity(entity)
-	print("[World] _on_entities DONE")
+	for e in data["entities"]:
+		var et = e.get("entity_type", "?")
+		var px = float(e.get("position_x", 0)) / 10.0
+		var pz = float(e.get("position_y", 0)) / 10.0
+		var mi = MeshInstance3D.new()
+		var b = BoxMesh.new()
+		if et == "dragon":
+			b.size = Vector3(10, 5, 10)
+			var m = StandardMaterial3D.new(); m.albedo_color = Color(1, 0, 0)
+			mi.set_surface_override_material(0, m)
+			mi.position = Vector3(px, 2.5, pz)
+		elif et == "territory":
+			b.size = Vector3(30, 0.2, 30)
+			var m = StandardMaterial3D.new(); m.albedo_color = Color(0.5, 0.5, 0.5)
+			mi.set_surface_override_material(0, m)
+			mi.position = Vector3(px, -0.1, pz)
+		else:
+			b.size = Vector3(1, 2, 1)
+			var m = StandardMaterial3D.new(); m.albedo_color = Color(0, 1, 0)
+			mi.set_surface_override_material(0, m)
+			mi.position = Vector3(px, 1, pz)
+		mi.mesh = b
+		add_child(mi)
+
 
 func _on_dragons(data):
-	print("[World] _on_dragons() called, data=", data)
-	if data == null: return
-	if data.has("dragons"):
-		for d in data["dragons"]:
-			_log("Dragao: " + d.get("dragon_name", "???"))
+	pass
 
-func _spawn_entity(entity: Dictionary):
-	var et = entity.get("entity_type", "")
-	var px = float(entity.get("position_x", 0)) / 10.0
-	var pz = float(entity.get("position_y", 0)) / 10.0
-	var mi = MeshInstance3D.new()
-	print("[World] spawn_entity type=", et, " at (", px, ",", pz, ")")
-	
-	if et == "dragon":
-		var box = BoxMesh.new(); box.size = Vector3(10, 5, 10)
-		mi.mesh = box
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.6, 0.1, 0.1)
-		mi.set_surface_override_material(0, mat)
-		mi.position = Vector3(px, 2.5, pz)
-		var lbl = Label3D.new()
-		lbl.text = entity.get("name", "Vorak") + " [AMEACA]"
-		lbl.position = Vector3(0, 6, 0)
-		mi.add_child(lbl)
-	elif et == "territory":
-		var box = BoxMesh.new(); box.size = Vector3(20, 0.2, 20)
-		mi.mesh = box
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.3, 0.3, 0.3)
-		mi.set_surface_override_material(0, mat)
-		mi.position = Vector3(px, -0.1, pz)
-	elif et == "faction":
-		var box = BoxMesh.new(); box.size = Vector3(3, 3, 3)
-		mi.mesh = box
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.8, 0.7, 0.2)
-		mi.set_surface_override_material(0, mat)
-		mi.position = Vector3(px, 1.5, pz)
-	else:
-		var cyl = CylinderMesh.new(); cyl.height = 2.0; cyl.radius = 0.5
-		mi.mesh = cyl
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.3, 0.7, 0.3)
-		mi.set_surface_override_material(0, mat)
-		mi.position = Vector3(px, 1.0, pz)
-	add_child(mi)
-	print("[World] spawn_entity DONE")
 
-func _on_kill():
-	if network and current_entity_id != "":
-		_log("Enviando morte...")
-		network.trigger_death(current_entity_id, func(d): _log("Morte enviada"))
-
-func _on_return():
-	if network and current_entity_id != "":
-		_log("Enviando retorno...")
-		network.trigger_return(current_entity_id, func(d): _log("Retorno enviado"))
-
-func _log(msg: String):
-	print("[World] ", msg)
-	if event_log:
-		event_log.text = msg + "\n" + event_log.text
+func _find_meshes(node, result):
+	if node is MeshInstance3D:
+		result.append(node)
+	for c in node.get_children():
+		_find_meshes(c, result)

@@ -1,37 +1,56 @@
-[gd_scene load_steps=5 format=3 uid="uid://world00000000000000001"]
+[gd_scene load_steps=7 format=3 uid="uid://world00000000000000001"]
 
 [ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-size = Vector2(200, 200)
+size = Vector2(500, 500)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
-albedo_color = Color(0.25, 0.25, 0.3, 1)
+[sub_resource type="StandardMaterial3D" id="mat_ground"]
+albedo_color = Color(0.3, 0.3, 0.35, 1)
+roughness = 0.9
 
-[sub_resource type="Environment" id="Environment_default"]
+[sub_resource type="BoxMesh" id="BoxMesh_red"]
+size = Vector3(10, 10, 10)
+
+[sub_resource type="StandardMaterial3D" id="mat_red"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="Environment" id="env_default"]
 background_mode = 1
-background_color = Color(0.02, 0.02, 0.04, 1)
+background_color = Color(0.05, 0.05, 0.08, 1)
 ambient_light_source = 1
 ambient_light_color = Color(0.3, 0.3, 0.4, 1)
+tonemap_mode = 0
 
 [node name="World" type="Node3D"]
 script = ExtResource("1_world")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-position = Vector3(0, 12, 15)
-rotation = Vector3(-0.5, 0, 0)
+position = Vector3(0, 15, 20)
+rotation = Vector3(-0.6, 0, 0)
 current = true
+fov = 70
+near = 0.05
+far = 4000.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-position = Vector3(10, 20, 10)
+position = Vector3(10, 30, 10)
+rotation = Vector3(-0.8, 0.3, 0)
+light_energy = 2.0
+shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_default")
+environment = SubResource("env_default")
 
 [node name="Ground" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
-surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+surface_material_override/0 = SubResource("mat_ground")
+
+[node name="RedCube" type="MeshInstance3D" parent="."]
+position = Vector3(0, 5, 0)
+mesh = SubResource("BoxMesh_red")
+surface_material_override/0 = SubResource("mat_red")
 
 [node name="EntitySpawner" type="Node3D" parent="."]
 
