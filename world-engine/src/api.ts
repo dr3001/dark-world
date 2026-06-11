@@ -83,6 +83,9 @@ addRoute("POST", "/test/character", async (req, res) => {
   await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,50,'admin_grant','system','Initial character grant','system')", [b.account_id, cid]);
   await query("INSERT INTO character_origins (character_id, origin_name, homeland) VALUES ($1, 'Viajante do Vale Cinzento', 'Vale Cinzento') ON CONFLICT DO NOTHING", [cid]);
   await query("INSERT INTO character_allegiances (character_id, allegiance_type) VALUES ($1, 'wanderer') ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO character_biographies (character_id, origin_name, birth_homeland) VALUES ($1, 'Viajante do Vale Cinzento', 'Vale Cinzento') ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO character_reputation (character_id, target_type, target_id, reputation_score) VALUES ($1, 'world', 'world', 0) ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO character_timeline (character_id, event_type, title, description) VALUES ($1, 'birth', 'Nascimento', 'Despertou no Vale Cinzento pela primeira vez') ON CONFLICT DO NOTHING", [cid]);
   json(res, { character: chr.rows[0], entity: ent.rows[0] }, 201);
 });
 
