@@ -12,6 +12,12 @@ const routes: Route[] = [];
 function addRoute(method: string, pattern: string, handler: Route["handler"]) { routes.push({ method, path: new RegExp(`^${pattern}$`), handler }); }
 function json(res: ServerResponse, data: unknown, status = 200) { res.writeHead(status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }); res.end(JSON.stringify(data)); }
 function body(req: IncomingMessage): Promise<Record<string, unknown>> { return new Promise((resolve) => { let data = ""; req.on("data", (chunk) => (data += chunk)); req.on("end", () => { try { resolve(JSON.parse(data)); } catch { resolve({}); } }); }); }
+async function isStaff(staffId: unknown): Promise<boolean> {
+  if (!staffId) return false;
+  const r = await query("SELECT role FROM accounts_profile WHERE id = $1", [staffId]);
+  if (!r.rows[0]) return false;
+  return ["admin","owner","moderator","staff"].includes(r.rows[0].role);
+}
 
 // ===== NAKAMA AUTH =====
 const NAKAMA_URL = "http://nakama:7350";
@@ -41,7 +47,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "0.7.0", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "1.0.0-gamma", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -58,6 +64,9 @@ addRoute("POST", "/test/account", async (req, res) => {
   const b = await body(req);
   const name = b.display_name || "Heroi Teste";
   const result = await query("INSERT INTO accounts_profile (id, display_name) VALUES (gen_random_uuid(), $1) RETURNING *", [name]);
+  const uid = result.rows[0].id;
+  await query("INSERT INTO login_history (user_id, ip, device, platform, success) VALUES ($1,$2,$3,$4,true)", [uid, (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "unknown"), b.device || "godot", b.platform || "mac"]);
+  await query("UPDATE accounts_profile SET last_login_at = NOW() WHERE id = $1", [uid]);
   json(res, { account: result.rows[0] }, 201);
 });
 
@@ -70,6 +79,7 @@ addRoute("POST", "/test/character", async (req, res) => {
   const cid = chr.rows[0].id;
   await query("INSERT INTO character_stats (character_id, zorium) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
   await query("INSERT INTO wallets (character_id, balance) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,50,'admin_grant','system','Initial character grant','system')", [b.account_id, cid]);
   json(res, { character: chr.rows[0], entity: ent.rows[0] }, 201);
 });
 
@@ -245,6 +255,8 @@ addRoute("POST", "/characters/([^/]+)/heal", async (req, res, matches) => {
   await query("UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE character_id = $2", [cost, cid]);
   await query("UPDATE character_stats SET zorium = zorium - $1, hp = max_hp, updated_at = NOW() WHERE character_id = $2", [cost, cid]);
   await query("INSERT INTO transactions (from_wallet_id, amount, tx_type, description) VALUES ($1,$2,'purchase','heal')", [w.rows[0].id, cost]);
+  const uid = (await query("SELECT account_id FROM characters WHERE id = $1", [cid])).rows[0]?.account_id;
+  await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,$3,'heal','npc','Curandeira heal','system')", [uid, cid, -cost]);
   const stats = await query("SELECT hp, max_hp, zorium FROM character_stats WHERE character_id = $1", [cid]);
   json(res, { healed: true, cost, stats: stats.rows[0] });
 });
@@ -260,6 +272,8 @@ addRoute("POST", "/characters/([^/]+)/spend", async (req, res, matches) => {
   await query("UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE character_id = $2", [amount, cid]);
   await query("UPDATE character_stats SET zorium = zorium - $1, updated_at = NOW() WHERE character_id = $2", [amount, cid]);
   await query("INSERT INTO transactions (from_wallet_id, amount, tx_type, description) VALUES ($1,$2,'purchase',$3)", [w.rows[0].id, amount, desc]);
+  const uid2 = (await query("SELECT account_id FROM characters WHERE id = $1", [cid])).rows[0]?.account_id;
+  await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,$3,'shop_purchase','game',$4,'system')", [uid2, cid, -amount, desc]);
   const bal = await query("SELECT balance FROM wallets WHERE character_id = $1", [cid]);
   json(res, { spent: amount, balance: parseFloat(bal.rows[0].balance), description: desc });
 });
@@ -396,6 +410,7 @@ addRoute("GET", "/characters/([^/]+)/vip", async (_req, res, matches) => {
 
 addRoute("POST", "/admin/grant-zorium", async (req, res) => {
   const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
   if (!b.character_id || !b.amount) return json(res, { error: "character_id and amount required" }, 400);
   const amt = parseFloat(b.amount as string);
   await query("UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE character_id = $2", [amt, b.character_id]);
@@ -407,6 +422,7 @@ addRoute("POST", "/admin/grant-zorium", async (req, res) => {
 
 addRoute("POST", "/admin/ban", async (req, res) => {
   const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
   if (!b.user_id || !b.ban_type) return json(res, { error: "user_id and ban_type required" }, 400);
   await query("INSERT INTO ban_records (user_id, staff_id, ban_type, reason, expires_at) VALUES ($1,$2,$3,$4,$5)", [b.user_id, b.staff_id || null, b.ban_type, b.reason || "", b.expires_at || null]);
   await query("UPDATE accounts_profile SET is_banned = true, status = 'banned' WHERE id = $1", [b.user_id]);
@@ -415,6 +431,7 @@ addRoute("POST", "/admin/ban", async (req, res) => {
 
 addRoute("POST", "/admin/unban", async (req, res) => {
   const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
   if (!b.user_id) return json(res, { error: "user_id required" }, 400);
   await query("UPDATE ban_records SET is_active = false WHERE user_id = $1", [b.user_id]);
   await query("UPDATE accounts_profile SET is_banned = false, status = 'active' WHERE id = $1", [b.user_id]);
@@ -423,6 +440,7 @@ addRoute("POST", "/admin/unban", async (req, res) => {
 
 addRoute("POST", "/admin/announce", async (req, res) => {
   const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
   if (!b.title || !b.message) return json(res, { error: "title and message required" }, 400);
   const r = await query("INSERT INTO server_announcements (title, message, priority, created_by) VALUES ($1,$2,$3,$4) RETURNING *", [b.title, b.message, b.priority || 5, b.created_by || "system"]);
   json(res, { announcement: r.rows[0] }, 201);

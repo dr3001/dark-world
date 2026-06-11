@@ -15,6 +15,7 @@ var loot_sys = null; var save_indicator: Label = null
 var equipment_panel_node: ColorRect; var journal_panel_node: ColorRect
 var character_id: String = ""; var auto_save_timer: float = 0.0
 var net = null; var chat_display = null; var chat_panel_node: ColorRect
+var speech_bubble = null
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -73,6 +74,9 @@ func _ready():
 	if NetScript:
 		net = NetScript.new(); net.name = "NetClient"; add_child(net)
 	chat_panel_node = get_node_or_null("HUD/ChatPanel")
+	var BubbleScript = load("res://scripts/SpeechBubble.gd")
+	if BubbleScript:
+		speech_bubble = BubbleScript.new(); speech_bubble.name = "SpeechBubble"; add_child(speech_bubble)
 	var ChatScript = load("res://scripts/ChatDisplay.gd")
 	if ChatScript:
 		chat_display = ChatScript.new(); add_child(chat_display)
@@ -535,6 +539,10 @@ func _open_dialog(npc: Node3D):
 	if interact_hint: interact_hint.text = ""
 	if net and character_id != "":
 		net.record_npc_memory(npc.name, character_id, "interaction", {"action": "dialog_opened"}, func(_d): pass)
+	if speech_bubble and npc:
+		speech_bubble.global_position = npc.global_position
+		var short_text = str(npc_dialogs.get(npc.name, "...")).substr(0, 40)
+		speech_bubble.show_message(short_text, 0, "player", 5.0)
 	_advance_quest(npc.name)
 
 func _close_dialog():
