@@ -1,0 +1,97 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  color: #c0c0c0;
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+}
+.container { max-width: 520px; margin: 0 auto; padding: 24px; }
+header { text-align: center; margin-bottom: 24px; }
+h1 { color: #cc3311; letter-spacing: 0.12em; font-size: 1.8rem; }
+.subtitle { color: #775544; margin-top: 6px; font-size: 0.9rem; }
+.status-panel {
+  background: #111122;
+  border: 1px solid #222244;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a33;
+  font-size: 0.9rem;
+}
+.status-row:last-child { border-bottom: none; }
+.status-row strong { color: #cc8833; }
+.progress-wrap { margin: 16px 0; }
+.progress-bar {
+  height: 8px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #882211, #cc3311);
+  transition: width 0.2s;
+}
+.progress-text { text-align: center; font-size: 0.8rem; color: #888; margin-top: 4px; }
+.message {
+  text-align: center;
+  min-height: 40px;
+  color: #998877;
+  margin: 12px 0;
+  font-size: 0.95rem;
+}
+.changelog {
+  background: #111122;
+  border: 1px solid #222244;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.changelog h2 { color: #884422; font-size: 0.85rem; margin-bottom: 8px; }
+.changelog pre {
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  color: #888;
+  font-family: inherit;
+}
+.actions { display: flex; gap: 12px; }
+.actions .btn { flex: 1; }
+.actions #settingsBtn { flex: 0 0 52px; font-size: 1.2rem; padding: 14px 0; }
+.settings-dialog {
+  background: #111122;
+  border: 1px solid #222244;
+  border-radius: 8px;
+  color: #c0c0c0;
+  padding: 20px;
+  max-width: 420px;
+}
+.settings-dialog::backdrop { background: rgba(0,0,0,0.7); }
+.settings-dialog h2 { color: #884422; margin-bottom: 12px; font-size: 1rem; }
+.settings-dialog dl { font-size: 0.85rem; margin-bottom: 16px; }
+.settings-dialog dt { color: #888; margin-top: 8px; }
+.settings-dialog dd { color: #cc8833; word-break: break-all; }
+.dialog-actions { display: flex; gap: 8px; }
+.dialog-actions .btn { flex: 1; }
+.message.update-required { color: #ffaa44; }
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: #882211; color: #fff; }
+.btn-primary:not(:disabled):hover { background: #aa3322; }
+.btn-secondary { background: #1a1a2e; color: #aaccee; border: 1px solid #333; }
+.btn-secondary:hover { background: #222244; }

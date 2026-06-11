@@ -1,0 +1,136 @@
+name: Build Launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'launcher/**'
+      - '.github/workflows/build-launcher.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install npm deps
+        working-directory: launcher
+        run: npm ci || npm install
+
+      - name: Build Tauri Windows
+        working-directory: launcher
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Stage Windows launcher
+        shell: bash
+        run: |
+          mkdir -p staging/windows
+          EXE=$(find launcher/src-tauri/target/release -maxdepth 1 -name '*.exe' | head -1)
+          cp "$EXE" staging/windows/DarkWorld-Launcher.exe
+          ls -la staging/windows/
+
+      - name: Upload Windows launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkworld-launcher-windows
+          path: staging/windows/DarkWorld-Launcher.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install npm deps
+        working-directory: launcher
+        run: npm ci || npm install
+
+      - name: Build Tauri macOS universal
+        working-directory: launcher
+        run: npm run build:mac
+        env:
+          CI: true
+
+      - name: Ad-hoc sign and package
+        run: |
+          APP=$(find launcher/src-tauri/target -path '*/release/bundle/macos/*.app' -maxdepth 5 | head -1)
+          if [ -z "$APP" ]; then
+            echo "No .app bundle found"
+            find launcher/src-tauri/target -name '*.app' 2>/dev/null || true
+            exit 1
+          fi
+          codesign --force --deep -s - "$APP"
+          mkdir -p staging/macos
+          cd "$(dirname "$APP")"
+          tar -czf "$GITHUB_WORKSPACE/staging/macos/DarkWorld-Launcher-mac.tar.gz" "$(basename "$APP")"
+          ls -la "$GITHUB_WORKSPACE/staging/macos/"
+
+      - name: Upload macOS launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkworld-launcher-macos
+          path: staging/macos/DarkWorld-Launcher-mac.tar.gz
+
+  deploy-vps:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: darkworld-launcher-windows
+          path: artifacts/windows
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: darkworld-launcher-macos
+          path: artifacts/macos
+
+      - name: Deploy to VPS via SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_KEY" ]; then
+            echo "DEPLOY secrets not configured — artifacts remain in GitHub only."
+            ls -laR artifacts/
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "${DEPLOY_USER:-root}@${DEPLOY_HOST}" \
+            "mkdir -p /opt/darkworld/build/launcher /opt/darkworld/build/launcher-mac"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            artifacts/windows/DarkWorld-Launcher.exe \
+            "${DEPLOY_USER:-root}@${DEPLOY_HOST}:/opt/darkworld/build/launcher/"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            artifacts/macos/DarkWorld-Launcher-mac.tar.gz \
+            "${DEPLOY_USER:-root}@${DEPLOY_HOST}:/opt/darkworld/build/launcher-mac/"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "${DEPLOY_USER:-root}@${DEPLOY_HOST}" \
+            "bash /opt/darkworld/scripts/deploy-launcher-artifacts.sh"

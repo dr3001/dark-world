@@ -1,84 +1,113 @@
 #!/bin/bash
 set -e
-# Dark World — Unified Release Pipeline v1.0.0
-# Builds, versions, hashes, publishes, validates
+# Dark World — Unified Release Pipeline v2.0.0
+# Builds, versions, hashes, publishes, validates, syncs DB
 
+ROOT="/opt/darkworld"
 GODOT="/opt/godot/godot_4.6.3/Godot_v4.6.3-stable_linux.x86_64"
-PROJECT="/opt/darkworld/godot-client"
-BUILD="/opt/darkworld/build"
+PROJECT="$ROOT/godot-client"
+BUILD="$ROOT/build"
 DOWNLOADS="/var/www/zorionlabs/dark/downloads"
-echo "[1/8] Updating version from version.json..."
-VERSION="${1:-$(python3 -c 'import json; print(json.load(open("/opt/darkworld/version.json"))["game_version"])' 2>/dev/null || echo '5.0.5')}"
-echo "  Version: $VERSION"
 
-# Sync LOCAL_VERSION in Main.gd
-sed -i "s/const LOCAL_VERSION = \"[0-9.]*\"/const LOCAL_VERSION = \"$VERSION\"/" "$PROJECT/scripts/Main.gd"
-echo "  Main.gd LOCAL_VERSION synced to $VERSION"
+bash "$ROOT/scripts/sync-version.sh"
 
-# Sync api.ts manifest version
-sed -i "s/game_version: \"[0-9.]*\"/game_version: \"$VERSION\"/" "$PROJECT/../world-engine/src/api.ts"
-echo "  api.ts manifest version synced to $VERSION"
-
-# Sync portal HTML
-sed -i "s/v[0-9]\.[0-9]\.[0-9]/v$VERSION/g" /var/www/zorionlabs/dark/index.html
-echo "  Portal HTML synced to v$VERSION"
-COMMIT=$(git -C /opt/darkworld rev-parse --short HEAD)
+VERSION="${1:-$(python3 -c 'import json; print(json.load(open("/opt/darkworld/version.json"))["game_version"])')}"
+LAUNCHER_VERSION="$(python3 -c 'import json; print(json.load(open("/opt/darkworld/version.json"))["launcher_version"])')"
+FORCE_UPDATE="$(python3 -c 'import json; print(str(json.load(open("/opt/darkworld/version.json")).get("force_update",False)).lower())')"
+COMMIT=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 echo "============================================"
-echo "  DARK WORLD — RELEASE PIPELINE v1.0.0"
-echo "  Version: $VERSION  Commit: $COMMIT"
+echo "  DARK WORLD — RELEASE PIPELINE v2.0.0"
+echo "  Game: $VERSION  Launcher: $LAUNCHER_VERSION  Commit: $COMMIT"
 echo "============================================"
 
-echo "[1/7] Cleaning..."
+echo "[1/9] Cleaning build dir..."
 rm -rf "$BUILD/windows" "$BUILD/DarkWorld.app"
 mkdir -p "$BUILD/windows"
 
-echo "[2/7] Export Windows..."
-GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | grep -E "DONE|ERROR"
+echo "[2/9] Export Windows..."
+GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | grep -E "DONE|ERROR|export" || true
 
-echo "[3/7] Export macOS..."
-GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "macOS" "$BUILD/DarkWorld.app" 2>&1 | grep -E "DONE|ERROR"
+echo "[3/9] Export macOS..."
+GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "macOS" "$BUILD/DarkWorld.app" 2>&1 | grep -E "DONE|ERROR|export" || true
 
-echo "[4/7] Package..."
+echo "[4/9] Package game..."
 cd "$BUILD"
-zip -r "$BUILD/DarkWorld-Windows-portable.zip" windows/ -x "*.pdb"
+zip -r "$BUILD/DarkWorld-Windows-portable.zip" windows/ -x "*.pdb" -q
 tar -czf "$BUILD/DarkWorld-Mac-debug.tar.gz" DarkWorld.app/
-makensis "/opt/darkworld/scripts/darkworld.nsi" 2>&1 | tail -2
 
-echo "[5/7] Generate manifest..."
-python3 -c "
-import json, os, hashlib
-files = []
-for path, url, platform in [
-    ('$BUILD/windows/DarkWorld.exe', '/downloads/DarkWorld-Windows-Setup.exe', 'windows'),
-    ('$BUILD/DarkWorld-Windows-portable.zip', '/downloads/DarkWorld-Windows-portable.zip', 'windows'),
-    ('$BUILD/DarkWorld-Mac-debug.tar.gz', '/downloads/DarkWorld-Mac-debug.tar.gz', 'macos'),
-]:
-    if os.path.exists(path):
-        size = os.path.getsize(path)
-        sha = hashlib.sha256(open(path, 'rb').read()).hexdigest()
-        files.append({'path': path.split('/')[-1], 'url': url, 'size': size, 'sha256': sha, 'platform': platform, 'required': True})
-manifest = {'game_version': '$VERSION', 'launcher_version': '1.0.0', 'build_commit': '$COMMIT', 'files': files, 'published_at': '$(date -u +%Y-%m-%dT%H:%M:%SZ)', 'force_update': True, 'backend_min_version': '2.0.0'}
-os.makedirs('$DOWNLOADS/launcher', exist_ok=True)
-with open('$DOWNLOADS/launcher/manifest.json', 'w') as f: json.dump(manifest, f)
-print(f'Manifest: {len(files)} files')
-for f in files: print(f'  {f[\"platform\"]}: {f[\"sha256\"][:16]}... ({f[\"size\"]//1024//1024}MB)')
-"
+if [ -f "$BUILD/launcher/DarkWorld-Launcher.exe" ]; then
+  makensis "$ROOT/scripts/darkworld.nsi" 2>&1 | tail -3 || true
+fi
 
-echo "[6/7] Publish..."
-cp "$BUILD/DarkWorld-Setup.exe" "$DOWNLOADS/DarkWorld-Windows-Setup.exe"
+echo "[5/9] Publish game files..."
 cp "$BUILD/DarkWorld-Windows-portable.zip" "$DOWNLOADS/"
 cp "$BUILD/DarkWorld-Mac-debug.tar.gz" "$DOWNLOADS/"
-sha256sum "$DOWNLOADS/DarkWorld-Windows-Setup.exe" > "$DOWNLOADS/DarkWorld-Windows-Setup.exe.sha256"
-sha256sum "$DOWNLOADS/DarkWorld-Mac-debug.tar.gz" > "$DOWNLOADS/DarkWorld-Mac-debug.tar.gz.sha256"
+if [ -f "$BUILD/DarkWorld-Launcher-Setup.exe" ]; then
+  cp "$BUILD/DarkWorld-Launcher-Setup.exe" "$DOWNLOADS/"
+fi
 
-echo "[7/7] Validate..."
-for F in DarkWorld-Windows-Setup.exe DarkWorld-Windows-portable.zip DarkWorld-Mac-debug.tar.gz; do
-  SIZE=$(stat -c%s "$DOWNLOADS/$F" 2>/dev/null || echo 0)
-  if [ "$SIZE" -gt 100000 ]; then echo "  ✓ $F ($((SIZE/1024/1024))MB)"; else echo "  ✗ $F MISSING"; fi
-done
+echo "[6/9] Generate manifest (hash = published file)..."
+python3 << PYEOF
+import json, os, hashlib
+from datetime import datetime, timezone
+
+downloads = "$DOWNLOADS"
+version = "$VERSION"
+launcher_version = "$LAUNCHER_VERSION"
+commit = "$COMMIT"
+force_update = "$FORCE_UPDATE" == "true"
+
+entries = [
+    ("DarkWorld-Windows-portable.zip", "/downloads/DarkWorld-Windows-portable.zip", "windows", "game", "zip"),
+    ("DarkWorld-Mac-debug.tar.gz", "/downloads/DarkWorld-Mac-debug.tar.gz", "macos", "game", "tar.gz"),
+]
+if os.path.exists(os.path.join(downloads, "DarkWorld-Launcher-Setup.exe")):
+    entries.append(("DarkWorld-Launcher-Setup.exe", "/downloads/DarkWorld-Launcher-Setup.exe", "windows", "launcher_installer", "exe"))
+if os.path.exists(os.path.join(downloads, "DarkWorld-Launcher.exe")):
+    entries.append(("DarkWorld-Launcher.exe", "/downloads/DarkWorld-Launcher.exe", "windows", "launcher", "exe"))
+if os.path.exists(os.path.join(downloads, "DarkWorld-Launcher-mac.tar.gz")):
+    entries.append(("DarkWorld-Launcher-mac.tar.gz", "/downloads/DarkWorld-Launcher-mac.tar.gz", "macos", "launcher", "tar.gz"))
+
+files = []
+for fname, url, platform, role, pkg in entries:
+    path = os.path.join(downloads, fname)
+    if not os.path.exists(path):
+        continue
+    sha = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    files.append({
+        "path": fname, "url": url, "size": os.path.getsize(path), "sha256": sha,
+        "platform": platform, "role": role, "package_type": pkg, "required": role == "game"
+    })
+
+manifest = {
+    "game_version": version,
+    "launcher_version": launcher_version,
+    "build_commit": commit,
+    "files": files,
+    "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "force_update": force_update,
+    "backend_min_version": "2.0.0",
+    "release_notes_url": "https://dark.zorionlabs.net/downloads/CHANGELOG.md"
+}
+os.makedirs(os.path.join(downloads, "launcher"), exist_ok=True)
+with open(os.path.join(downloads, "launcher", "manifest.json"), "w") as f:
+    json.dump(manifest, f, indent=2)
+print(f"Manifest: {len(files)} files")
+PYEOF
+
+echo "[7/9] Validate manifest hashes..."
+python3 "$ROOT/scripts/validate-manifest.py"
+
+echo "[8/9] Sync manifest to PostgreSQL..."
+python3 "$ROOT/scripts/sync-manifest-db.py" 2>/dev/null || echo "  (DB sync skipped)"
+
+echo "[9/9] Rebuild world-engine + purge cache..."
+cd "$ROOT/world-engine" && npm run build 2>/dev/null || true
+docker compose -f "$ROOT/docker-compose.yml" up -d world-engine 2>/dev/null || docker restart darkworld-world-engine 2>/dev/null || true
+bash "$ROOT/scripts/purge_cloudflare_cache.sh" 2>/dev/null || true
+
 echo "============================================"
 echo "  RELEASE v$VERSION PUBLISHED"
-echo "  Windows: https://dark.zorionlabs.net/downloads/DarkWorld-Windows-Setup.exe"
-echo "  macOS:   https://dark.zorionlabs.net/downloads/DarkWorld-Mac-debug.tar.gz"
+echo "  Manifest: https://dark.zorionlabs.net/downloads/launcher/manifest.json"
 echo "============================================"

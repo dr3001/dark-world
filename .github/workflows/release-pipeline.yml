@@ -1,0 +1,164 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      game_version:
+        description: 'Override game version (optional)'
+        required: false
+
+jobs:
+  build-launcher:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: darkworld-launcher-windows
+            path: staging/windows/DarkWorld-Launcher.exe
+          - os: macos-latest
+            artifact: darkworld-launcher-macos
+            path: staging/macos/DarkWorld-Launcher-mac.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install npm deps
+        working-directory: launcher
+        run: npm ci || npm install
+
+      - name: Build Tauri (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: launcher
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Build Tauri (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: launcher
+        run: npm run build:mac
+        env:
+          CI: true
+
+      - name: Stage Windows
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p staging/windows
+          EXE=$(find launcher/src-tauri/target/release -maxdepth 1 -name '*.exe' | head -1)
+          cp "$EXE" staging/windows/DarkWorld-Launcher.exe
+
+      - name: Stage macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          APP=$(find launcher/src-tauri/target -path '*/release/bundle/macos/*.app' -maxdepth 5 | head -1)
+          codesign --force --deep -s - "$APP"
+          mkdir -p staging/macos
+          cd "$(dirname "$APP")"
+          tar -czf "$GITHUB_WORKSPACE/staging/macos/DarkWorld-Launcher-mac.tar.gz" "$(basename "$APP")"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+
+  build-game:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.3-stable_linux.x86_64
+          mkdir -p ~/.local/share/godot/export_templates/4.6.3.stable
+          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates
+          cp /tmp/templates/templates/* ~/.local/share/godot/export_templates/4.6.3.stable/
+
+      - name: Export Godot Windows + macOS
+        run: |
+          mkdir -p build/windows build
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-debug "Windows" build/windows/DarkWorld.exe
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-debug "macOS" build/DarkWorld.app
+          cd build && zip -r DarkWorld-Windows-portable.zip windows/ -x "*.pdb" -q
+          tar -czf DarkWorld-Mac-debug.tar.gz DarkWorld.app/
+
+      - name: Upload game artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkworld-game-build
+          path: |
+            build/DarkWorld-Windows-portable.zip
+            build/DarkWorld-Mac-debug.tar.gz
+
+  publish:
+    needs: [build-launcher, build-game]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Stage for deploy
+        run: |
+          mkdir -p staging/launcher staging/game
+          find artifacts -name 'DarkWorld-Launcher.exe' -exec cp {} staging/launcher/ \;
+          find artifacts -name 'DarkWorld-Launcher-mac.tar.gz' -exec cp {} staging/launcher/ \;
+          find artifacts -name 'DarkWorld-Windows-portable.zip' -exec cp {} staging/game/ \;
+          find artifacts -name 'DarkWorld-Mac-debug.tar.gz' -exec cp {} staging/game/ \;
+          ls -laR staging/
+
+      - name: Deploy to VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_KEY" ]; then
+            echo "No VPS deploy secrets — skipping remote publish."
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          REMOTE="${DEPLOY_USER:-root}@${DEPLOY_HOST}"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "$REMOTE" \
+            "mkdir -p /opt/darkworld/build/launcher /opt/darkworld/build/launcher-mac /opt/darkworld/build"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -r staging/launcher/* "$REMOTE:/opt/darkworld/build/launcher/" || true
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key staging/launcher/DarkWorld-Launcher-mac.tar.gz "$REMOTE:/opt/darkworld/build/launcher-mac/" 2>/dev/null || \
+            scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key artifacts/**/DarkWorld-Launcher-mac.tar.gz "$REMOTE:/opt/darkworld/build/launcher-mac/" 2>/dev/null || true
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key staging/game/* "$REMOTE:/opt/darkworld/build/"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "$REMOTE" \
+            "bash /opt/darkworld/scripts/deploy-launcher-artifacts.sh && bash /opt/darkworld/scripts/publish-release.sh"
+
+      - name: Purge Cloudflare
+        env:
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          if [ -n "$CF_ZONE_ID" ] && [ -n "$CF_API_TOKEN" ]; then
+            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+              -H "Authorization: Bearer ${CF_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data '{"purge_everything":true}' || true
+          fi
