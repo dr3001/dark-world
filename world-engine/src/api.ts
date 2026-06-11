@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "2.0.0-epsilon", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -704,6 +704,80 @@ addRoute("GET", "/admin/security-logs", async (req, res) => {
   const b = await body(req);
   if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
   json(res, { logs: (await query("SELECT sl.*,ap.display_name FROM security_logs sl LEFT JOIN accounts_profile ap ON sl.user_id=ap.id ORDER BY sl.created_at DESC LIMIT 50")).rows });
+});
+
+// ===== WAR KINGDOM =====
+
+addRoute("GET", "/servers", async (_req, res) => {
+  json(res, { servers: (await query("SELECT * FROM game_servers ORDER BY name")).rows });
+});
+
+addRoute("GET", "/classes", async (_req, res) => {
+  json(res, { classes: (await query("SELECT * FROM hero_classes ORDER BY name")).rows });
+});
+
+addRoute("GET", "/classes/([^/]+)", async (_req, res, matches) => {
+  const c = (await query("SELECT * FROM hero_classes WHERE id = $1", [matches[1]])).rows[0];
+  json(res, { class: c || null });
+});
+
+addRoute("GET", "/territories/map", async (_req, res) => {
+  json(res, { territories: (await query("SELECT * FROM territory_map ORDER BY name")).rows });
+});
+
+addRoute("GET", "/kingdoms/list", async (_req, res) => {
+  json(res, { kingdoms: (await query("SELECT * FROM kingdom_registry ORDER BY level DESC, name")).rows });
+});
+
+addRoute("POST", "/kingdoms/create", async (req, res) => {
+  const b = await body(req);
+  if (!b.name || !b.tag || !b.ruler_user_id) return json(res, { error: "name, tag, ruler_user_id required" }, 400);
+  const r = await query("INSERT INTO kingdom_registry (name,tag,ruler_user_id,origin_clan_id) VALUES ($1,$2,$3,$4) RETURNING *", [b.name, b.tag, b.ruler_user_id, b.origin_clan_id || null]);
+  await query("INSERT INTO kingdom_members (kingdom_id,user_id,rank) VALUES ($1,$2,'king')", [r.rows[0].id, b.ruler_user_id]);
+  json(res, { kingdom: r.rows[0] }, 201);
+});
+
+addRoute("GET", "/kingdoms/([^/]+)/members", async (_req, res, matches) => {
+  json(res, { members: (await query("SELECT km.*,ap.display_name FROM kingdom_members km JOIN accounts_profile ap ON km.user_id=ap.id WHERE km.kingdom_id=$1 ORDER BY km.rank", [matches[1]])).rows });
+});
+
+addRoute("POST", "/war/declaration", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.declared_by)) return json(res, { error: "Unauthorized: staff required for war declaration" }, 403);
+  if (!b.attacker_type || !b.attacker_id || !b.defender_type || !b.defender_id) return json(res, { error: "attacker and defender required" }, 400);
+  const r = await query("INSERT INTO war_declarations (attacker_type,attacker_id,defender_type,defender_id,declared_by,reason) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *", [b.attacker_type, b.attacker_id, b.defender_type, b.defender_id, b.declared_by, b.reason || ""]);
+  await query("INSERT INTO war_logs (war_id,actor_id,action) VALUES ($1,$2,'declared')", [r.rows[0].id, b.declared_by]);
+  json(res, { war: r.rows[0] }, 201);
+});
+
+addRoute("GET", "/war/([^/]+)", async (_req, res, matches) => {
+  json(res, { war: (await query("SELECT * FROM war_declarations WHERE id = $1", [matches[1]])).rows[0] || null });
+});
+
+addRoute("GET", "/war/([^/]+)/participants", async (_req, res, matches) => {
+  json(res, { participants: (await query("SELECT wp.*,c.character_name FROM war_participants wp JOIN characters c ON wp.character_id=c.id WHERE wp.war_id=$1", [matches[1]])).rows });
+});
+
+addRoute("GET", "/rankings/war", async (_req, res) => {
+  json(res, { rankings: (await query("SELECT * FROM war_ranking_entries ORDER BY score DESC LIMIT 50")).rows });
+});
+
+addRoute("GET", "/characters/([^/]+)/allegiance", async (_req, res, matches) => {
+  await query("INSERT INTO character_origins (character_id) VALUES ($1) ON CONFLICT DO NOTHING", [matches[1]]);
+  const origin = (await query("SELECT co.*,hc.name as class_name FROM character_origins co LEFT JOIN hero_classes hc ON co.class_id=hc.id WHERE co.character_id=$1", [matches[1]])).rows[0];
+  const allegiance = (await query("SELECT * FROM character_allegiances WHERE character_id=$1", [matches[1]])).rows[0];
+  json(res, { origin, allegiance });
+});
+
+addRoute("POST", "/characters/([^/]+)/class", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.class_id) return json(res, { error: "class_id required" }, 400);
+  await query("INSERT INTO character_origins (character_id, class_id) VALUES ($1,$2) ON CONFLICT (character_id) DO UPDATE SET class_id=$2", [matches[1], b.class_id]);
+  json(res, { assigned: true });
+});
+
+addRoute("GET", "/troops/types", async (_req, res) => {
+  json(res, { troop_types: (await query("SELECT * FROM troop_types ORDER BY category, name")).rows });
 });
 
 // ===== ROUTER =====

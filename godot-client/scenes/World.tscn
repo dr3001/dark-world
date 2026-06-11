@@ -211,6 +211,16 @@ text = "Ensolarado 22°C"
 position = Vector2(1100, 90)
 modulate = Color(0.7, 0.85, 1, 1)
 
+[node name="ClassLabel" type="Label" parent="HUD"]
+text = ""
+position = Vector2(25, 680)
+modulate = Color(0.9, 0.7, 0.3, 1)
+
+[node name="ServerLabel" type="Label" parent="HUD"]
+text = "Vale Cinzento"
+position = Vector2(1100, 110)
+modulate = Color(0.6, 0.6, 0.6, 1)
+
 [node name="ChatPanel" type="ColorRect" parent="HUD"]
 position = Vector2(10, 350)
 size = Vector2(400, 160)

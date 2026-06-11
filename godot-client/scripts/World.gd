@@ -17,6 +17,7 @@ var character_id: String = ""; var auto_save_timer: float = 0.0
 var net = null; var chat_display = null; var chat_panel_node: ColorRect
 var speech_bubble = null; var mp_sync = null; var online_label: Label
 var world_sim = null; var time_label: Label; var weather_label_node: Label
+var class_label: Label; var server_label: Label
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -102,6 +103,8 @@ func _ready():
 	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
 	if quest_text: quest_text.text = "Explore o Vale Cinzento"
 	online_label = get_node_or_null("HUD/OnlineCount")
+	class_label = get_node_or_null("HUD/ClassLabel")
+	server_label = get_node_or_null("HUD/ServerLabel")
 	time_label = get_node_or_null("HUD/TimeLabel")
 	weather_label_node = get_node_or_null("HUD/WeatherLabel")
 	var WSScript = load("res://scripts/WorldSimulation.gd")
@@ -608,6 +611,17 @@ func _load_character_data():
 			journal.load_from_server(data["quests"])
 			print("[WORLD] Quests loaded — ", data["quests"].size(), " quests")
 	)
+	var alleg_http = HTTPRequest.new(); add_child(alleg_http)
+	alleg_http.request_completed.connect(func(_r, code, _h, resp):
+		if code == 200 and resp:
+			var d = JSON.parse_string(resp.get_string_from_utf8())
+			if d and d.has("origin") and d["origin"] and class_label:
+				var cn = d["origin"].get("class_name", "")
+				var on2 = d["origin"].get("origin_name", "Viajante")
+				class_label.text = (str(cn) + " — " if cn else "") + str(on2)
+		alleg_http.queue_free()
+	, CONNECT_ONE_SHOT)
+	alleg_http.request("http://5.78.142.138:9000/characters/" + character_id + "/allegiance")
 	net.load_save(character_id, func(data):
 		if data and data.has("save") and data["save"] and player:
 			var pos = data["save"].get("position", {})

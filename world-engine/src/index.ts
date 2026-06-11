@@ -27,6 +27,11 @@ import { FriendsModule } from "./modules/friends/FriendsModule.js";
 import { MultiplayerModule } from "./modules/multiplayer/MultiplayerModule.js";
 import { SecurityLogModule } from "./modules/security/SecurityLogModule.js";
 import { WorldSimulationModule } from "./modules/world/WorldSimulationModule.js";
+import { ClassModule } from "./modules/class/ClassModule.js";
+import { WarModule } from "./modules/war/WarModule.js";
+import { KingdomWarModule } from "./modules/kingdom-war/KingdomWarModule.js";
+import { TroopModule } from "./modules/troop/TroopModule.js";
+import { TerritoryMapModule } from "./modules/territory-map/TerritoryMapModule.js";
 import { handleRequest } from "./api.js";
 import { createServer } from "http";
 import { config } from "./config.js";
@@ -69,6 +74,11 @@ async function main() {
   engine.registerModule(new MultiplayerModule());
   engine.registerModule(new SecurityLogModule());
   engine.registerModule(new WorldSimulationModule());
+  engine.registerModule(new ClassModule());
+  engine.registerModule(new WarModule());
+  engine.registerModule(new KingdomWarModule());
+  engine.registerModule(new TroopModule());
+  engine.registerModule(new TerritoryMapModule());
 
   engine.eventEngine.registerHandler("CHARACTER_DIED", (e) => deathMod.handleDeath(e));
   engine.eventEngine.registerHandler("AFTERLIFE_ENTERED", (e) => afterlifeMod.handleAfterlifeEntered(e));
