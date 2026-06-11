@@ -196,6 +196,11 @@ text = "Salvando..."
 position = Vector2(1100, 690)
 modulate = Color(0.5, 0.8, 0.5, 1)
 
+[node name="OnlineCount" type="Label" parent="HUD"]
+text = "Online: 0"
+position = Vector2(1100, 50)
+modulate = Color(0.4, 1, 0.5, 1)
+
 [node name="ChatPanel" type="ColorRect" parent="HUD"]
 position = Vector2(10, 350)
 size = Vector2(400, 160)

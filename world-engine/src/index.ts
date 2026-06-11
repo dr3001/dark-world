@@ -22,6 +22,10 @@ import { RankingModule } from "./modules/ranking/RankingModule.js";
 import { AdminModule } from "./modules/admin/AdminModule.js";
 import { EventModule as GameEventModule } from "./modules/event/EventModule.js";
 import { AIProviderModule } from "./modules/ai/AIProviderModule.js";
+import { AuthRealModule } from "./modules/auth/AuthRealModule.js";
+import { FriendsModule } from "./modules/friends/FriendsModule.js";
+import { MultiplayerModule } from "./modules/multiplayer/MultiplayerModule.js";
+import { SecurityLogModule } from "./modules/security/SecurityLogModule.js";
 import { handleRequest } from "./api.js";
 import { createServer } from "http";
 import { config } from "./config.js";
@@ -59,6 +63,10 @@ async function main() {
   engine.registerModule(new AdminModule());
   engine.registerModule(new GameEventModule());
   engine.registerModule(new AIProviderModule());
+  engine.registerModule(new AuthRealModule());
+  engine.registerModule(new FriendsModule());
+  engine.registerModule(new MultiplayerModule());
+  engine.registerModule(new SecurityLogModule());
 
   engine.eventEngine.registerHandler("CHARACTER_DIED", (e) => deathMod.handleDeath(e));
   engine.eventEngine.registerHandler("AFTERLIFE_ENTERED", (e) => afterlifeMod.handleAfterlifeEntered(e));

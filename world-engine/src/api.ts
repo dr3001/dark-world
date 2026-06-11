@@ -1,6 +1,7 @@
 import { IncomingMessage, ServerResponse } from "http";
 import { query } from "./db.js";
 import { config, KNOWN_UUIDS } from "./config.js";
+import { randomBytes, scryptSync } from "crypto";
 
 interface Route {
   method: string;
@@ -483,6 +484,171 @@ addRoute("POST", "/npcs/([^/]+)/chat", async (req, res, matches) => {
 addRoute("GET", "/wallet/([^/]+)/ledger", async (_req, res, matches) => {
   const r = await query("SELECT * FROM zorium_ledger WHERE character_id = $1 ORDER BY created_at DESC LIMIT 50", [matches[1]]);
   json(res, { ledger: r.rows });
+});
+
+// ===== DELTA: AUTH, FRIENDS, MULTIPLAYER =====
+
+function hashPw(pw: string): string { const s = randomBytes(16).toString("hex"); return s + ":" + scryptSync(pw, s, 64).toString("hex"); }
+function verifyPw(pw: string, stored: string): boolean { const [s, h] = stored.split(":"); return scryptSync(pw, s, 64).toString("hex") === h; }
+
+addRoute("POST", "/auth/register-email", async (req, res) => {
+  const b = await body(req);
+  if (!b.email || !b.password || !b.display_name) return json(res, { error: "email, password, display_name required" }, 400);
+  const exists = await query("SELECT id FROM accounts_profile WHERE email = $1", [b.email]);
+  if (exists.rows[0]) return json(res, { error: "Email already registered" }, 409);
+  const hash = hashPw(b.password as string);
+  const user = (await query("INSERT INTO accounts_profile (id,email,display_name,password_hash,username) VALUES (gen_random_uuid(),$1,$2,$3,$4) RETURNING id,email,display_name", [b.email, b.display_name, hash, (b.email as string).split("@")[0] + "_" + Date.now()])).rows[0];
+  const token = randomBytes(32).toString("hex");
+  await query("INSERT INTO email_verifications (user_id,token,email) VALUES ($1,$2,$3)", [user.id, token, b.email]);
+  await query("INSERT INTO login_history (user_id,ip,success) VALUES ($1,$2,true)", [user.id, (req.headers["x-forwarded-for"] as string) || "unknown"]);
+  await query("INSERT INTO security_logs (user_id,action,ip,risk_level) VALUES ($1,'register',$2,'low')", [user.id, (req.headers["x-forwarded-for"] as string) || "unknown"]);
+  json(res, { user, verification_token: token, brevo: process.env.BREVO_API_KEY ? "configured" : "not_configured" }, 201);
+});
+
+addRoute("POST", "/auth/login", async (req, res) => {
+  const b = await body(req);
+  if (!b.email || !b.password) return json(res, { error: "email and password required" }, 400);
+  const ip = (req.headers["x-forwarded-for"] as string) || req.socket?.remoteAddress || "unknown";
+  const user = (await query("SELECT * FROM accounts_profile WHERE email = $1", [b.email])).rows[0];
+  if (!user || !user.password_hash) { json(res, { error: "Invalid credentials" }, 401); return; }
+  if (user.is_banned) { json(res, { error: "Account banned" }, 403); return; }
+  if (!verifyPw(b.password as string, user.password_hash)) {
+    await query("INSERT INTO login_history (user_id,ip,success,failure_reason) VALUES ($1,$2,false,'wrong_password')", [user.id, ip]);
+    await query("INSERT INTO security_logs (user_id,action,ip,risk_level,metadata) VALUES ($1,'login_failed',$2,'medium',$3)", [user.id, ip, JSON.stringify({email:b.email})]);
+    return json(res, { error: "Invalid credentials" }, 401);
+  }
+  const token = randomBytes(48).toString("hex");
+  await query("INSERT INTO auth_sessions (user_id,token,ip,device) VALUES ($1,$2,$3,$4)", [user.id, token, ip, b.device || "web"]);
+  await query("INSERT INTO login_history (user_id,ip,device,success) VALUES ($1,$2,$3,true)", [user.id, ip, b.device || "web"]);
+  await query("UPDATE accounts_profile SET last_login_at=NOW() WHERE id=$1", [user.id]);
+  json(res, { token, user: { id: user.id, email: user.email, display_name: user.display_name, role: user.role, vip_level: user.vip_level } });
+});
+
+addRoute("POST", "/auth/logout", async (req, res) => {
+  const b = await body(req);
+  if (b.token) await query("UPDATE auth_sessions SET is_active=false WHERE token=$1", [b.token]);
+  json(res, { logged_out: true });
+});
+
+addRoute("GET", "/auth/verify/([^/]+)", async (_req, res, matches) => {
+  const v = (await query("SELECT * FROM email_verifications WHERE token=$1 AND verified_at IS NULL AND expires_at>NOW()", [matches[1]])).rows[0];
+  if (!v) return json(res, { error: "Invalid or expired token" }, 400);
+  await query("UPDATE email_verifications SET verified_at=NOW() WHERE id=$1", [v.id]);
+  await query("UPDATE accounts_profile SET email_verified=true WHERE id=$1", [v.user_id]);
+  json(res, { verified: true });
+});
+
+addRoute("POST", "/auth/reset-password", async (req, res) => {
+  const b = await body(req);
+  if (!b.email) return json(res, { error: "email required" }, 400);
+  const user = (await query("SELECT id FROM accounts_profile WHERE email=$1", [b.email])).rows[0];
+  if (!user) return json(res, { ok: true }); // don't reveal existence
+  const token = randomBytes(32).toString("hex");
+  await query("INSERT INTO password_resets (user_id,token) VALUES ($1,$2)", [user.id, token]);
+  json(res, { ok: true, reset_token: token, brevo: process.env.BREVO_API_KEY ? "configured" : "not_configured" });
+});
+
+addRoute("GET", "/friends/([^/]+)", async (_req, res, matches) => {
+  const friends = (await query("SELECT f.friend_id,ap.display_name,ap.role,ap.vip_level FROM friends f JOIN accounts_profile ap ON f.friend_id=ap.id WHERE f.user_id=$1 AND f.status='active'", [matches[1]])).rows;
+  const pending = (await query("SELECT fr.*,ap.display_name FROM friend_requests fr JOIN accounts_profile ap ON fr.from_user_id=ap.id WHERE fr.to_user_id=$1 AND fr.status='pending'", [matches[1]])).rows;
+  json(res, { friends, pending_requests: pending });
+});
+
+addRoute("POST", "/friends/request", async (req, res) => {
+  const b = await body(req);
+  if (!b.from_user_id || !b.to_user_id) return json(res, { error: "from_user_id and to_user_id required" }, 400);
+  const r = await query("INSERT INTO friend_requests (from_user_id,to_user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING *", [b.from_user_id, b.to_user_id]);
+  json(res, { request: r.rows[0] || { status: "already_pending" } }, 201);
+});
+
+addRoute("POST", "/friends/accept", async (req, res) => {
+  const b = await body(req);
+  if (!b.request_id || !b.user_id) return json(res, { error: "request_id and user_id required" }, 400);
+  const rq = (await query("UPDATE friend_requests SET status='accepted' WHERE id=$1 AND to_user_id=$2 AND status='pending' RETURNING *", [b.request_id, b.user_id])).rows[0];
+  if (!rq) return json(res, { error: "Request not found" }, 404);
+  await query("INSERT INTO friends (user_id,friend_id) VALUES ($1,$2),($2,$1) ON CONFLICT DO NOTHING", [rq.from_user_id, rq.to_user_id]);
+  json(res, { accepted: true });
+});
+
+addRoute("POST", "/friends/remove", async (req, res) => {
+  const b = await body(req);
+  await query("DELETE FROM friends WHERE (user_id=$1 AND friend_id=$2) OR (user_id=$2 AND friend_id=$1)", [b.user_id, b.friend_id]);
+  json(res, { removed: true });
+});
+
+addRoute("POST", "/friends/block", async (req, res) => {
+  const b = await body(req);
+  await query("DELETE FROM friends WHERE (user_id=$1 AND friend_id=$2) OR (user_id=$2 AND friend_id=$1)", [b.user_id, b.target_id]);
+  await query("INSERT INTO friends (user_id,friend_id,status) VALUES ($1,$2,'blocked') ON CONFLICT (user_id,friend_id) DO UPDATE SET status='blocked'", [b.user_id, b.target_id]);
+  json(res, { blocked: true });
+});
+
+addRoute("POST", "/players/position", async (req, res) => {
+  const b = await body(req);
+  if (!b.character_id) return json(res, { error: "character_id required" }, 400);
+  await query(
+    `INSERT INTO player_positions (character_id,user_id,world_id,x,y,z,display_name,vip_level,role,updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+     ON CONFLICT (character_id) DO UPDATE SET x=$4,y=$5,z=$6,display_name=$7,updated_at=NOW()`,
+    [b.character_id, b.user_id||null, KNOWN_UUIDS.WORLD_LIVING, b.x||0, b.y||3, b.z||0, b.display_name||"Hero", b.vip_level||0, b.role||"player"]
+  );
+  await query("INSERT INTO online_sessions (character_id,user_id,last_heartbeat,is_online) VALUES ($1,$2,NOW(),true) ON CONFLICT (character_id) DO UPDATE SET last_heartbeat=NOW(),is_online=true", [b.character_id, b.user_id||null]);
+  json(res, { synced: true });
+});
+
+addRoute("GET", "/players/nearby", async (_req, res) => {
+  const r = await query(
+    `SELECT pp.character_id,pp.display_name,pp.x,pp.y,pp.z,pp.vip_level,pp.role
+     FROM player_positions pp JOIN online_sessions os ON pp.character_id=os.character_id
+     WHERE os.is_online=true AND os.last_heartbeat > NOW()-INTERVAL '10 seconds' LIMIT 50`
+  );
+  json(res, { players: r.rows });
+});
+
+addRoute("GET", "/players/online", async (_req, res) => {
+  const r = await query("SELECT count(*)::int as online FROM online_sessions WHERE is_online=true AND last_heartbeat > NOW()-INTERVAL '10 seconds'");
+  json(res, { online: r.rows[0].online });
+});
+
+addRoute("POST", "/players/heartbeat", async (req, res) => {
+  const b = await body(req);
+  if (b.character_id) await query("UPDATE online_sessions SET last_heartbeat=NOW(),is_online=true WHERE character_id=$1", [b.character_id]);
+  json(res, { ok: true });
+});
+
+addRoute("GET", "/chat/channels", async (_req, res) => {
+  json(res, { channels: ["global","local","clan","system","staff","ch1","ch2","ch3","ch4","ch5","ch6","ch7","ch8","ch9","ch10"] });
+});
+
+addRoute("POST", "/chat/moderate", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  if (!b.message_id || !b.action) return json(res, { error: "message_id and action required" }, 400);
+  await query("UPDATE chat_messages SET moderation_status=$1 WHERE id=$2", [b.action, b.message_id]);
+  await query("INSERT INTO moderation_logs (staff_id,target_user_id,action,reason) VALUES ($1::uuid,(SELECT user_id FROM chat_messages WHERE id=$2),$3,$4)", [b.staff_id, b.message_id, "chat_" + b.action, b.reason || ""]);
+  json(res, { moderated: true });
+});
+
+addRoute("GET", "/chat/rules", async (_req, res) => {
+  json(res, { rules: (await query("SELECT * FROM chat_moderation_rules WHERE is_active=true ORDER BY rule_type")).rows });
+});
+
+addRoute("POST", "/clans/([^/]+)/rank", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.user_id || !b.role) return json(res, { error: "user_id and role required" }, 400);
+  await query("UPDATE clan_members SET role=$1 WHERE clan_id=$2 AND user_id=$3", [b.role, matches[1], b.user_id]);
+  await query("INSERT INTO clan_logs (clan_id,user_id,action,details) VALUES ($1,$2,'rank_change',$3)", [matches[1], b.user_id, JSON.stringify({new_role: b.role})]);
+  json(res, { updated: true });
+});
+
+addRoute("GET", "/clans/([^/]+)/logs", async (_req, res, matches) => {
+  json(res, { logs: (await query("SELECT cl.*,ap.display_name FROM clan_logs cl LEFT JOIN accounts_profile ap ON cl.user_id=ap.id WHERE cl.clan_id=$1 ORDER BY cl.created_at DESC LIMIT 50", [matches[1]])).rows });
+});
+
+addRoute("GET", "/admin/security-logs", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  json(res, { logs: (await query("SELECT sl.*,ap.display_name FROM security_logs sl LEFT JOIN accounts_profile ap ON sl.user_id=ap.id ORDER BY sl.created_at DESC LIMIT 50")).rows });
 });
 
 // ===== ROUTER =====

@@ -25,7 +25,13 @@ func _ready():
 	quit_btn.pressed.connect(_on_quit_pressed)
 
 func _on_create_account_pressed():
-	_set_status("Criando conta...")
+	var landing_url = "https://dark.zorionlabs.net"
+	if OS.has_feature("web"):
+		_set_status("Redirecionando para registro...")
+	else:
+		OS.shell_open(landing_url + "/register")
+		_set_status("Abra o navegador para criar sua conta")
+	_set_status("Criando conta teste...")
 	network.create_account("Heroi Mac " + str(randi() % 1000), _on_account_created)
 
 func _on_account_created(data: Dictionary):

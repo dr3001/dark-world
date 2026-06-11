@@ -15,7 +15,7 @@ var loot_sys = null; var save_indicator: Label = null
 var equipment_panel_node: ColorRect; var journal_panel_node: ColorRect
 var character_id: String = ""; var auto_save_timer: float = 0.0
 var net = null; var chat_display = null; var chat_panel_node: ColorRect
-var speech_bubble = null
+var speech_bubble = null; var mp_sync = null; var online_label: Label
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -97,6 +97,11 @@ func _ready():
 	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
 	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
 	if quest_text: quest_text.text = "Explore o Vale Cinzento"
+	online_label = get_node_or_null("HUD/OnlineCount")
+	var MPScript = load("res://scripts/MultiplayerSync.gd")
+	if MPScript and net and player:
+		mp_sync = MPScript.new(); mp_sync.name = "MultiplayerSync"; add_child(mp_sync)
+		mp_sync.setup(net, character_id, player, online_label)
 	_load_character_data()
 
 # ===== PLAZA =====
