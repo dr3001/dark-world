@@ -33,8 +33,7 @@ func _on_enter_pressed():
 	elif current_entity_id != "":
 		_enter_world()
 	else:
-		_set_status("Criando conta rapida...")
-		network.create_account("Hero " + str(randi() % 9999), _on_account_created)
+		_set_status("Digite seu email e senha, ou crie uma conta no portal.")
 
 func _on_login_response(data):
 	if not data:
