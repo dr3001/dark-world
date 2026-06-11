@@ -7,7 +7,7 @@ var current_character_id: String = ""
 
 const WORLD_SCENE = "res://scenes/World.tscn"
 const LANDING_URL = "https://dark.zorionlabs.net"
-const LOCAL_VERSION = "4.3.2"
+const LOCAL_VERSION = "5.0.1"
 
 @onready var status_label: Label = $"StatusLabel"
 @onready var enter_btn: Button = $"EnterButton"

@@ -675,6 +675,8 @@ addRoute("POST", "/auth/login", async (req, res) => {
     return json(res, { error: "Invalid credentials" }, 401);
   }
   if (!user.email_verified) { return json(res, { error: "Email not verified. Check your inbox." }, 403); }
+  const termsAccepted = (await query("SELECT id FROM terms_acceptance WHERE user_id = $1", [user.id])).rows[0];
+  if (!termsAccepted) return json(res, { error: "You must accept the Terms of Use before logging in. Visit /terms/" }, 403);
   const token = randomBytes(48).toString("hex");
   await query("INSERT INTO auth_sessions (user_id,token,ip,device) VALUES ($1,$2,$3,$4)", [user.id, token, ip, b.device || "web"]);
   await query("INSERT INTO login_history (user_id,ip,device,success) VALUES ($1,$2,$3,true)", [user.id, ip, b.device || "web"]);
@@ -1124,7 +1126,7 @@ addRoute("GET", "/api/launcher/status", async (_req, res) => {
 
 addRoute("GET", "/api/launcher/manifest", async (_req, res) => {
   const m = (await query("SELECT * FROM launcher_manifests ORDER BY published_at DESC LIMIT 1")).rows[0];
-  json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: "4.3.2", launcher_version: "0.5.0", force_update: true, backend_min_version: "2.0.0" });
+  json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: "5.0.1", launcher_version: "1.0.0", force_update: true, backend_min_version: "2.0.0" });
 });
 
 addRoute("GET", "/api/launcher/news", async (_req, res) => {
