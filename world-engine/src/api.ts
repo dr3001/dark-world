@@ -81,6 +81,8 @@ addRoute("POST", "/test/character", async (req, res) => {
   await query("INSERT INTO character_stats (character_id, zorium) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
   await query("INSERT INTO wallets (character_id, balance) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
   await query("INSERT INTO zorium_ledger (user_id, character_id, amount, tx_type, source, reason, created_by) VALUES ($1,$2,50,'admin_grant','system','Initial character grant','system')", [b.account_id, cid]);
+  await query("INSERT INTO character_origins (character_id, origin_name, homeland) VALUES ($1, 'Viajante do Vale Cinzento', 'Vale Cinzento') ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO character_allegiances (character_id, allegiance_type) VALUES ($1, 'wanderer') ON CONFLICT DO NOTHING", [cid]);
   json(res, { character: chr.rows[0], entity: ent.rows[0] }, 201);
 });
 
@@ -450,6 +452,7 @@ addRoute("POST", "/admin/ban", async (req, res) => {
   if (!b.user_id || !b.ban_type) return json(res, { error: "user_id and ban_type required" }, 400);
   await query("INSERT INTO ban_records (user_id, staff_id, ban_type, reason, expires_at) VALUES ($1,$2,$3,$4,$5)", [b.user_id, b.staff_id || null, b.ban_type, b.reason || "", b.expires_at || null]);
   await query("UPDATE accounts_profile SET is_banned = true, status = 'banned' WHERE id = $1", [b.user_id]);
+  await query("INSERT INTO moderation_logs (staff_id, target_user_id, action, reason) VALUES ($1::uuid,$2,$3,$4)", [b.staff_id, b.user_id, 'ban_' + b.ban_type, b.reason || ""]);
   json(res, { banned: true });
 });
 
@@ -459,6 +462,7 @@ addRoute("POST", "/admin/unban", async (req, res) => {
   if (!b.user_id) return json(res, { error: "user_id required" }, 400);
   await query("UPDATE ban_records SET is_active = false WHERE user_id = $1", [b.user_id]);
   await query("UPDATE accounts_profile SET is_banned = false, status = 'active' WHERE id = $1", [b.user_id]);
+  await query("INSERT INTO moderation_logs (staff_id, target_user_id, action, reason) VALUES ($1::uuid,$2,'unban','Unbanned by moderation')", [b.staff_id, b.user_id]);
   json(res, { unbanned: true });
 });
 
@@ -704,6 +708,46 @@ addRoute("GET", "/admin/security-logs", async (req, res) => {
   const b = await body(req);
   if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
   json(res, { logs: (await query("SELECT sl.*,ap.display_name FROM security_logs sl LEFT JOIN accounts_profile ap ON sl.user_id=ap.id ORDER BY sl.created_at DESC LIMIT 50")).rows });
+});
+
+// ===== PRODUCTION FIXES =====
+
+addRoute("POST", "/characters/([^/]+)/quests/complete", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.quest_id) return json(res, { error: "quest_id required" }, 400);
+  const r = await query("UPDATE quest_progress SET state='completed', completed_at=NOW(), updated_at=NOW() WHERE character_id=$1 AND quest_id=$2 AND state='active' RETURNING *", [matches[1], b.quest_id]);
+  if (!r.rows[0]) return json(res, { error: "Quest not active" }, 400);
+  const quest = (await query("SELECT rewards FROM quest_data WHERE id=$1", [b.quest_id])).rows[0];
+  if (quest && quest.rewards) {
+    const rewards = typeof quest.rewards === "string" ? JSON.parse(quest.rewards) : quest.rewards;
+    if (rewards.xp) await query("UPDATE character_stats SET xp=xp+$1, updated_at=NOW() WHERE character_id=$2", [rewards.xp, matches[1]]);
+    if (rewards.zorium) {
+      await query("UPDATE wallets SET balance=balance+$1, updated_at=NOW() WHERE character_id=$2", [rewards.zorium, matches[1]]);
+      await query("UPDATE character_stats SET zorium=zorium+$1, updated_at=NOW() WHERE character_id=$2", [rewards.zorium, matches[1]]);
+      const uid = (await query("SELECT account_id FROM characters WHERE id=$1", [matches[1]])).rows[0]?.account_id;
+      await query("INSERT INTO zorium_ledger (user_id,character_id,amount,tx_type,source,reason) VALUES ($1,$2,$3,'quest_reward','system','Quest completion')", [uid, matches[1], rewards.zorium]);
+    }
+  }
+  await query("INSERT INTO score_entries (user_id,character_id,score_type,amount,source) SELECT c.account_id,c.id,'quest',100,'quest_complete' FROM characters c WHERE c.id=$1", [matches[1]]);
+  await query("INSERT INTO ranking_entries (user_id,character_id,ranking_type,score) SELECT c.account_id,c.id,'quests',1 FROM characters c WHERE c.id=$1 ON CONFLICT DO NOTHING", [matches[1]]);
+  json(res, { completed: true, rewards: quest?.rewards });
+});
+
+addRoute("POST", "/characters/([^/]+)/power-rush/activate", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.power_rush_id) return json(res, { error: "power_rush_id required" }, 400);
+  const pr = (await query("SELECT * FROM power_rush_items WHERE id=$1", [b.power_rush_id])).rows[0];
+  if (!pr) return json(res, { error: "Power Rush not found" }, 404);
+  const cost = parseFloat(pr.cost_zorium);
+  const w = await query("SELECT * FROM wallets WHERE character_id=$1", [matches[1]]);
+  if (!w.rows[0] || parseFloat(w.rows[0].balance) < cost) return json(res, { error: "Insufficient zorium", cost }, 400);
+  await query("UPDATE wallets SET balance=balance-$1, updated_at=NOW() WHERE character_id=$2", [cost, matches[1]]);
+  await query("UPDATE character_stats SET zorium=zorium-$1, updated_at=NOW() WHERE character_id=$2", [cost, matches[1]]);
+  const uid = (await query("SELECT account_id FROM characters WHERE id=$1", [matches[1]])).rows[0]?.account_id;
+  await query("INSERT INTO zorium_ledger (user_id,character_id,amount,tx_type,source,reason) VALUES ($1,$2,$3,'shop_purchase','system','Power Rush activation')", [uid, matches[1], -cost]);
+  const expires = new Date(Date.now() + pr.duration_seconds * 1000).toISOString();
+  await query("INSERT INTO user_power_rush (user_id,character_id,power_rush_id,expires_at) VALUES ($1,$2,$3,$4)", [uid, matches[1], b.power_rush_id, expires]);
+  json(res, { activated: true, expires_at: expires, effect: pr.effects });
 });
 
 // ===== WAR KINGDOM =====
