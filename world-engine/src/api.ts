@@ -1059,6 +1059,12 @@ addRoute("POST", "/combat-vfx/event/dev", async (req, res) => {
   json(res, { logged: true });
 });
 
+addRoute("POST", "/combat-vfx/event/log", async (req, res) => {
+  const b = await body(req);
+  await query("INSERT INTO combat_visual_logs (event_type, attacker_id, target_id, position, synced) VALUES ($1,$2,$3,$4,false)", [b.event_type || "combat", b.attacker_id, b.target_id, JSON.stringify(b.position || {})]);
+  json(res, { logged: true });
+});
+
 // ===== ROUTER =====
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }

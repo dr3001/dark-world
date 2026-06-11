@@ -90,8 +90,7 @@ func _log_to_server(event_type: String, data: Dictionary):
 	if event_type not in important: return
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
-	http.request("http://5.78.142.138:9000/combat-vfx/event/dev", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({
-		"staff_id": "dev_auto_log",
+	http.request("http://5.78.142.138:9000/combat-vfx/event/log", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({
 		"event_type": event_type,
 		"position": {"x": data.get("position", Vector3.ZERO).x, "y": data.get("position", Vector3.ZERO).y, "z": data.get("position", Vector3.ZERO).z}
 	}))
