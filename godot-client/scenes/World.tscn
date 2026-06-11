@@ -43,7 +43,7 @@ environment = SubResource("env_default")
 [node name="Ground" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
-material_override = SubResource("mat_ground")
+surface_material_override/0 = SubResource("mat_ground")
 
 [node name="TerrainBuilder" type="Node3D" parent="."]
 
@@ -54,7 +54,6 @@ layout_mode = 3
 anchors_preset = 15
 
 [node name="HPBar" type="ColorRect" parent="HUD"]
-
 position = Vector2(20, 620)
 size = Vector2(200, 15)
 color = Color(0.8, 0.1, 0.1)
