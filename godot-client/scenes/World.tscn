@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://world00000000000000001"]
+[gd_scene load_steps=4 format=3 uid="uid://world00000000000000001"]
 
 [ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
 
@@ -8,12 +8,6 @@ size = Vector2(500, 500)
 [sub_resource type="StandardMaterial3D" id="mat_ground"]
 albedo_color = Color(0.3, 0.3, 0.35, 1)
 roughness = 0.9
-
-[sub_resource type="BoxMesh" id="BoxMesh_red"]
-size = Vector3(10, 10, 10)
-
-[sub_resource type="StandardMaterial3D" id="mat_red"]
-albedo_color = Color(1, 0, 0, 1)
 
 [sub_resource type="Environment" id="env_default"]
 background_mode = 1
@@ -46,12 +40,6 @@ environment = SubResource("env_default")
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = SubResource("mat_ground")
-
-[node name="RedCube" type="MeshInstance3D" parent="."]
-position = Vector3(0, 5, 0)
-mesh = SubResource("BoxMesh_red")
-surface_material_override/0 = SubResource("mat_red")
-
 [node name="EntitySpawner" type="Node3D" parent="."]
 
 [node name="HUD" type="Control" parent="."]

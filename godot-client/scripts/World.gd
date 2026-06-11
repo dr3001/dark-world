@@ -78,20 +78,22 @@ func _on_entities(data):
 		var b = BoxMesh.new()
 		if et == "dragon":
 			b.size = Vector3(10, 5, 10)
+			mi.mesh = b
 			var m = StandardMaterial3D.new(); m.albedo_color = Color(1, 0, 0)
 			mi.set_surface_override_material(0, m)
 			mi.position = Vector3(px, 2.5, pz)
 		elif et == "territory":
 			b.size = Vector3(30, 0.2, 30)
+			mi.mesh = b
 			var m = StandardMaterial3D.new(); m.albedo_color = Color(0.5, 0.5, 0.5)
 			mi.set_surface_override_material(0, m)
 			mi.position = Vector3(px, -0.1, pz)
 		else:
 			b.size = Vector3(1, 2, 1)
+			mi.mesh = b
 			var m = StandardMaterial3D.new(); m.albedo_color = Color(0, 1, 0)
 			mi.set_surface_override_material(0, m)
 			mi.position = Vector3(px, 1, pz)
-		mi.mesh = b
 		add_child(mi)
 
 
