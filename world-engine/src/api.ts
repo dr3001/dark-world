@@ -1032,6 +1032,22 @@ addRoute("GET", "/api/launcher/news", async (_req, res) => {
   json(res, { news: ann });
 });
 
+addRoute("POST", "/api/launcher/update-report", async (req, res) => {
+  const b = await body(req);
+  if (b.user_id) {
+    await query("INSERT INTO launcher_logs (user_id, character_id, platform, action, details) VALUES ($1,$2,$3,$4,$5)", [b.user_id, b.character_id||null, b.platform||"unknown", b.action||"start", JSON.stringify({version: b.version, status: b.status})]);
+  }
+  json(res, { received: true });
+});
+
+addRoute("POST", "/api/launcher/repair-report", async (req, res) => {
+  const b = await body(req);
+  if (b.user_id) {
+    await query("INSERT INTO launcher_logs (user_id, platform, action, details) VALUES ($1,$2,'repair',$3)", [b.user_id, b.platform||"unknown", JSON.stringify({success: b.success, files_checked: b.files_checked||0})]);
+  }
+  json(res, { received: true });
+});
+
 // ===== COMBAT VFX (dev only) =====
 
 addRoute("GET", "/combat-vfx/config", async (req, res) => {
