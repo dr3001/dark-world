@@ -1,5 +1,6 @@
 extends Node
 
+const SERVER_URL = "http://5.78.142.138:9000"
 var net = null
 var character_id: String = ""
 var player_node: CharacterBody3D = null
@@ -32,7 +33,7 @@ func _report_position():
 	})
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
-	http.request("http://5.78.142.138:9000/players/position", ["Content-Type: application/json"], HTTPClient.METHOD_POST, b)
+	http.request(SERVER_URL + "/players/position", ["Content-Type: application/json"], HTTPClient.METHOD_POST, b)
 
 func _fetch_nearby():
 	var http = HTTPRequest.new(); add_child(http)
@@ -43,7 +44,7 @@ func _fetch_nearby():
 				_update_other_players(data["players"])
 		http.queue_free()
 	, CONNECT_ONE_SHOT)
-	http.request("http://5.78.142.138:9000/players/nearby")
+	http.request(SERVER_URL + "/players/nearby")
 
 func _update_other_players(players: Array):
 	var seen: Dictionary = {}

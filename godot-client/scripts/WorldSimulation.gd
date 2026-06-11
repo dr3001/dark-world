@@ -1,5 +1,6 @@
 extends Node
 
+const SERVER_URL = "http://5.78.142.138:9000"
 var sun: DirectionalLight3D
 var env_node: WorldEnvironment
 var time_label: Label
@@ -39,7 +40,7 @@ func _fetch_world_state():
 			if data: _apply_state(data)
 		http.queue_free()
 	, CONNECT_ONE_SHOT)
-	http.request("http://5.78.142.138:9000/world/state")
+	http.request(SERVER_URL + "/world/state")
 
 func _apply_state(data: Dictionary):
 	if data.has("time") and data["time"]:

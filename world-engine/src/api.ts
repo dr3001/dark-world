@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "1.0.0-gamma", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "2.0.0-epsilon", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -162,6 +162,10 @@ addRoute("POST", "/characters/([^/]+)/inventory", async (req, res, matches) => {
   for (let s = 0; s < 20; s++) { if (!usedSet.has(s)) { slot = s; break; } }
   if (slot === -1) return json(res, { error: "Inventory full" }, 400);
   const r = await query("INSERT INTO inventory (character_id, item_id, slot_index, quantity) VALUES ($1,$2,$3,$4) RETURNING *", [matches[1], b.item_id, slot, qty]);
+  const itemInfo = await query("SELECT item_type FROM items WHERE id = $1", [b.item_id]);
+  if (itemInfo.rows[0]?.item_type === "weapon") {
+    await query("INSERT INTO weapon_upgrades (item_id, character_id) VALUES ($1,$2) ON CONFLICT (item_id, character_id) DO NOTHING", [b.item_id, matches[1]]);
+  }
   json(res, { added: r.rows[0] }, 201);
 });
 
