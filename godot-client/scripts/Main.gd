@@ -51,9 +51,20 @@ func _check_version():
 		_set_status("v" + LOCAL_VERSION + " — Pronto.")
 		enter_btn.disabled = false
 		create_btn.disabled = false
+		_register_device()
 		http.queue_free()
 	, CONNECT_ONE_SHOT)
 	http.request("https://dark.zorionlabs.net/api/launcher/manifest")
+
+func _register_device():
+	var http = HTTPRequest.new(); add_child(http)
+	http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
+	var inst_id = OS.get_unique_id() if OS.has_feature("unique_id") else "DW-" + str(Time.get_unix_time_from_system())
+	http.request("https://dark.zorionlabs.net/dw-api/launcher/register-device", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({
+		"installation_id": inst_id,
+		"device_id_hash": str(OS.get_unique_id()).sha256_text().substr(0, 16),
+		"os": OS.get_name()
+	}))
 
 func _on_enter_pressed():
 	var email = email_input.text.strip_edges() if email_input else ""

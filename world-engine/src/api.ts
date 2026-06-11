@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule","TwitchModule","AICoachModule","LiveWindowModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule","TwitchModule","AICoachModule","LiveWindowModule","TrustEngineModule","FraudEngineModule","AntiCheatModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -1079,6 +1079,65 @@ addRoute("POST", "/combat-vfx/event/log", async (req, res) => {
   const b = await body(req);
   await query("INSERT INTO combat_visual_logs (event_type, attacker_id, target_id, position, synced) VALUES ($1,$2,$3,$4,false)", [b.event_type || "combat", b.attacker_id, b.target_id, JSON.stringify(b.position || {})]);
   json(res, { logged: true });
+});
+
+// ===== ZERO TRUST =====
+
+addRoute("POST", "/launcher/register-device", async (req, res) => {
+  const b = await body(req);
+  const uid = b.user_id as string || null;
+  const instId = (b.installation_id as string) || ("DW-" + Date.now());
+  const hash = (b.device_id_hash as string) || instId;
+  const ip = (req.headers["x-forwarded-for"] as string) || "unknown";
+  const r = await query("INSERT INTO device_profiles (user_id, installation_id, device_id_hash, os_name, ip_first, ip_last) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING *", [uid, instId, hash, b.os || "unknown", ip, ip]);
+  const device = r.rows[0] || (await query("SELECT * FROM device_profiles WHERE installation_id = $1", [instId])).rows[0];
+  json(res, { device_id: device.id, trust_score: device.trust_score });
+});
+
+addRoute("GET", "/launcher/trust/:deviceId", async (_req, res, matches) => {
+  const d = (await query("SELECT * FROM device_profiles WHERE id = $1 OR installation_id = $1", [matches[1]])).rows[0];
+  json(res, { trust_score: d?.trust_score || 500, blacklisted: d?.is_blacklisted || false });
+});
+
+addRoute("GET", "/admin/trust-dashboard", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  const avg = (await query("SELECT AVG(trust_score)::int as avg FROM trust_profiles")).rows[0]?.avg || 500;
+  const low = (await query("SELECT count(*) FROM trust_profiles WHERE trust_score < 300")).rows[0]?.count || 0;
+  const top = (await query("SELECT tp.*, ap.display_name FROM trust_profiles tp JOIN accounts_profile ap ON tp.user_id = ap.id ORDER BY tp.trust_score ASC LIMIT 10")).rows;
+  json(res, { avg_trust: avg, low_trust_count: parseInt(low), top_low_trust: top });
+});
+
+addRoute("GET", "/admin/fraud-dashboard", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  const cats = (await query("SELECT category, count(*) as total FROM fraud_events WHERE resolved = false GROUP BY category ORDER BY total DESC")).rows;
+  const total = (await query("SELECT count(*) FROM fraud_events WHERE resolved = false")).rows[0]?.count || 0;
+  json(res, { total_unresolved: parseInt(total), by_category: cats });
+});
+
+addRoute("GET", "/admin/security-dashboard", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  const online = (await query("SELECT count(*)::int as online FROM online_sessions WHERE is_online = true AND last_heartbeat > NOW() - INTERVAL '10 seconds'")).rows[0].online;
+  const alerts = (await query("SELECT count(*) FROM fraud_events WHERE resolved = false AND severity IN ('high','critical','blocker')")).rows[0]?.count || 0;
+  const cheats = (await query("SELECT count(*) FROM anti_cheat_events WHERE created_at > NOW() - INTERVAL '24 hours'")).rows[0]?.count || 0;
+  json(res, { online_players: online, high_alerts: parseInt(alerts), cheats_24h: parseInt(cheats) });
+});
+
+addRoute("GET", "/admin/cheat-events", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  json(res, { events: (await query("SELECT ace.*, ap.display_name FROM anti_cheat_events ace LEFT JOIN accounts_profile ap ON ace.user_id = ap.id ORDER BY ace.created_at DESC LIMIT 50")).rows });
+});
+
+addRoute("POST", "/admin/trust/adjust", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  if (!b.user_id || b.delta === undefined) return json(res, { error: "user_id and delta required" }, 400);
+  await query("UPDATE trust_profiles SET trust_score = GREATEST(0, LEAST(1000, trust_score + $1)), updated_at = NOW() WHERE user_id = $2", [parseInt(b.delta as string) || 0, b.user_id]);
+  await query("INSERT INTO trust_events (user_id, event_type, score_delta, reason) VALUES ($1,'admin_adjust',$2,$3)", [b.user_id, parseInt(b.delta as string) || 0, b.reason || "Admin adjustment"]);
+  json(res, { adjusted: true });
 });
 
 // ===== ROUTER =====
