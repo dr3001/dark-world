@@ -15,6 +15,10 @@ echo "  Version: $VERSION"
 sed -i "s/const LOCAL_VERSION = \"[0-9.]*\"/const LOCAL_VERSION = \"$VERSION\"/" "$PROJECT/scripts/Main.gd"
 echo "  Main.gd LOCAL_VERSION synced to $VERSION"
 
+# Sync api.ts manifest version
+sed -i "s/game_version: \"[0-9.]*\"/game_version: \"$VERSION\"/" "$PROJECT/../world-engine/src/api.ts"
+echo "  api.ts manifest version synced to $VERSION"
+
 # Sync portal HTML
 sed -i "s/v[0-9]\.[0-9]\.[0-9]/v$VERSION/g" /var/www/zorionlabs/dark/index.html
 echo "  Portal HTML synced to v$VERSION"
