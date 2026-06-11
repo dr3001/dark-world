@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "identifier": "com.zorionlabs.darkworld.launcher",
   "build": {
-    "frontendDist": "..",
-    "devUrl": "../index.html",
+    "frontendDist": "../ui",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
   },
