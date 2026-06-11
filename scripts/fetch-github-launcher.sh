@@ -21,10 +21,17 @@ fi
 
 api() { curl -sS -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" "$@"; }
 
-echo "Finding latest successful workflow run..."
-run_id=$(api "https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/runs?status=success&per_page=1" | python3 -c "import sys,json; print(json.load(sys.stdin)['workflow_runs'][0]['id'])" 2>/dev/null || true)
+echo "Checking workflow runs..."
+runs_json=$(api "https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=5")
+in_progress=$(echo "$runs_json" | python3 -c "import sys,json; print(any(r['status']=='in_progress' for r in json.load(sys.stdin)['workflow_runs']))" 2>/dev/null || echo false)
+
+run_id=$(echo "$runs_json" | python3 -c "import sys,json; print(next((r['id'] for r in json.load(sys.stdin)['workflow_runs'] if r['conclusion']=='success'), ''))" 2>/dev/null || true)
 
 if [ -z "$run_id" ]; then
+  if [ "$in_progress" = "True" ]; then
+    echo "Workflow in progress — wait and re-run this script."
+    exit 0
+  fi
   echo "No successful run yet — dispatching workflow..."
   api -X POST "https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches" \
     -d '{"ref":"main"}' >/dev/null
