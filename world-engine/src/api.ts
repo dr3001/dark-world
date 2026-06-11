@@ -102,10 +102,140 @@ addRoute("GET", "/dragons", async (_req, res) => {
   json(res, { dragons: result.rows });
 });
 
+// ===== RPG FOUNDATION =====
+
+addRoute("GET", "/characters/([^/]+)/stats", async (_req, res, matches) => {
+  const cid = matches[1];
+  let stats = await query("SELECT * FROM character_stats WHERE character_id = $1", [cid]);
+  if (!stats.rows[0]) {
+    await query("INSERT INTO character_stats (character_id) VALUES ($1) ON CONFLICT DO NOTHING", [cid]);
+    stats = await query("SELECT * FROM character_stats WHERE character_id = $1", [cid]);
+  }
+  json(res, { stats: stats.rows[0] });
+});
+
+addRoute("PUT", "/characters/([^/]+)/stats", async (req, res, matches) => {
+  const b = await body(req);
+  if (b.add_xp) {
+    const xp = parseInt(b.add_xp as string);
+    const stats = await query("SELECT * FROM character_stats WHERE character_id = $1", [matches[1]]);
+    if (!stats.rows[0]) return json(res, { error: "Stats not found" }, 404);
+    const newXp = stats.rows[0].xp + xp;
+    let newLevel = stats.rows[0].level;
+    const xpTable = [0,100,250,500,800,1200,1700,2300,3000,4000,5200,6600,8200,10000,12500,15500,19000,23000,28000,34000];
+    while (newLevel < xpTable.length && newXp >= xpTable[newLevel]) newLevel++;
+    const hpGain = (newLevel - stats.rows[0].level) * 10;
+    const manaGain = (newLevel - stats.rows[0].level) * 5;
+    await query("UPDATE character_stats SET xp=$1, level=$2, max_hp=max_hp+$3, hp=LEAST(hp+$3,max_hp+$3), max_mana=max_mana+$4, mana=LEAST(mana+$4,max_mana+$4), updated_at=NOW() WHERE character_id=$5", [newXp, newLevel, hpGain, manaGain, matches[1]]);
+    json(res, { xp: newXp, level: newLevel, leveledUp: newLevel > stats.rows[0].level });
+  } else {
+    json(res, { error: "Provide add_xp" }, 400);
+  }
+});
+
+addRoute("GET", "/characters/([^/]+)/inventory", async (_req, res, matches) => {
+  const r = await query("SELECT i.*, it.name as item_name, it.item_type, it.rarity, it.base_stats, it.description FROM inventory i JOIN items it ON i.item_id = it.id WHERE i.character_id = $1 ORDER BY i.slot_index", [matches[1]]);
+  json(res, { inventory: r.rows });
+});
+
+addRoute("POST", "/characters/([^/]+)/inventory", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.item_id) return json(res, { error: "item_id required" }, 400);
+  const qty = parseInt((b.quantity as string) || "1");
+  const used = await query("SELECT slot_index FROM inventory WHERE character_id = $1", [matches[1]]);
+  const usedSet = new Set(used.rows.map((r: any) => r.slot_index));
+  let slot = -1;
+  for (let s = 0; s < 20; s++) { if (!usedSet.has(s)) { slot = s; break; } }
+  if (slot === -1) return json(res, { error: "Inventory full" }, 400);
+  const r = await query("INSERT INTO inventory (character_id, item_id, slot_index, quantity) VALUES ($1,$2,$3,$4) RETURNING *", [matches[1], b.item_id, slot, qty]);
+  json(res, { added: r.rows[0] }, 201);
+});
+
+addRoute("DELETE", "/characters/([^/]+)/inventory/([0-9]+)", async (_req, res, matches) => {
+  await query("DELETE FROM inventory WHERE character_id = $1 AND slot_index = $2", [matches[1], parseInt(matches[2])]);
+  json(res, { removed: true });
+});
+
+addRoute("GET", "/characters/([^/]+)/equipment", async (_req, res, matches) => {
+  const r = await query("SELECT e.*, i.name as item_name, i.rarity, i.base_stats FROM equipment e JOIN items i ON e.item_id = i.id WHERE e.character_id = $1", [matches[1]]);
+  json(res, { equipment: r.rows });
+});
+
+addRoute("POST", "/characters/([^/]+)/equipment/equip", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.item_id || !b.slot_type) return json(res, { error: "item_id and slot_type required" }, 400);
+  await query("INSERT INTO equipment (character_id, slot_type, item_id) VALUES ($1,$2,$3) ON CONFLICT (character_id, slot_type) DO UPDATE SET item_id = $3, created_at = NOW()", [matches[1], b.slot_type, b.item_id]);
+  json(res, { equipped: true, slot: b.slot_type });
+});
+
+addRoute("POST", "/characters/([^/]+)/equipment/unequip", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.slot_type) return json(res, { error: "slot_type required" }, 400);
+  const r = await query("DELETE FROM equipment WHERE character_id = $1 AND slot_type = $2 RETURNING *", [matches[1], b.slot_type]);
+  json(res, { unequipped: r.rows.length > 0 });
+});
+
+addRoute("GET", "/characters/([^/]+)/wallet", async (_req, res, matches) => {
+  await query("INSERT INTO wallets (character_id, balance) VALUES ($1, 0) ON CONFLICT (character_id) DO NOTHING", [matches[1]]);
+  const r = await query("SELECT * FROM wallets WHERE character_id = $1", [matches[1]]);
+  json(res, { wallet: r.rows[0] });
+});
+
+addRoute("POST", "/wallets/transfer", async (req, res) => {
+  const b = await body(req);
+  if (!b.from_character_id || !b.to_character_id || !b.amount) return json(res, { error: "from_character_id, to_character_id, amount required" }, 400);
+  const amt = parseFloat(b.amount as string);
+  const from = await query("SELECT * FROM wallets WHERE character_id = $1", [b.from_character_id]);
+  if (!from.rows[0] || parseFloat(from.rows[0].balance) < amt) return json(res, { error: "Insufficient zorium" }, 400);
+  await query("UPDATE wallets SET balance = balance - $1 WHERE character_id = $2", [amt, b.from_character_id]);
+  await query("INSERT INTO wallets (character_id, balance) VALUES ($1, 0) ON CONFLICT (character_id) DO NOTHING", [b.to_character_id]);
+  await query("UPDATE wallets SET balance = balance + $1 WHERE character_id = $2", [amt, b.to_character_id]);
+  json(res, { transferred: amt });
+});
+
+addRoute("GET", "/items", async (_req, res) => {
+  const r = await query("SELECT * FROM items ORDER BY rarity, item_type, name");
+  json(res, { items: r.rows });
+});
+
+addRoute("GET", "/characters/([^/]+)/quests", async (_req, res, matches) => {
+  const r = await query("SELECT qp.*, qd.name as quest_name, qd.description, qd.rewards FROM quest_progress qp JOIN quest_data qd ON qp.quest_id = qd.id WHERE qp.character_id = $1 ORDER BY qp.created_at DESC", [matches[1]]);
+  json(res, { quests: r.rows });
+});
+
+addRoute("POST", "/characters/([^/]+)/quests/accept", async (req, res, matches) => {
+  const b = await body(req);
+  if (!b.quest_id) return json(res, { error: "quest_id required" }, 400);
+  const existing = await query("SELECT * FROM quest_progress WHERE character_id = $1 AND quest_id = $2", [matches[1], b.quest_id]);
+  if (existing.rows[0]) return json(res, { error: "Quest already tracked" }, 400);
+  const r = await query("INSERT INTO quest_progress (character_id, quest_id, state, started_at) VALUES ($1,$2,'active',NOW()) RETURNING *", [matches[1], b.quest_id]);
+  json(res, { quest: r.rows[0] }, 201);
+});
+
+addRoute("GET", "/npcs/([^/]+)/profile", async (_req, res, matches) => {
+  await query("INSERT INTO npc_profiles (entity_id, role) VALUES ($1, 'villager') ON CONFLICT (entity_id) DO NOTHING", [matches[1]]);
+  const r = await query("SELECT * FROM npc_profiles WHERE entity_id = $1", [matches[1]]);
+  json(res, { profile: r.rows[0] });
+});
+
+addRoute("POST", "/characters/([^/]+)/save", async (req, res, matches) => {
+  const b = await body(req);
+  const pos = b.position || { x: 0, y: 3, z: 0 };
+  const stats = await query("SELECT * FROM character_stats WHERE character_id = $1", [matches[1]]);
+  const inv = await query("SELECT item_id, slot_index, quantity FROM inventory WHERE character_id = $1", [matches[1]]);
+  const equip = await query("SELECT slot_type, item_id FROM equipment WHERE character_id = $1", [matches[1]]);
+  const quests = await query("SELECT quest_id, state, progress FROM quest_progress WHERE character_id = $1", [matches[1]]);
+  await query(
+    "INSERT INTO save_states (character_id, position, stats_snapshot, inventory_snapshot, equipment_snapshot, quest_snapshot) VALUES ($1,$2,$3,$4,$5,$6)",
+    [matches[1], JSON.stringify(pos), JSON.stringify(stats.rows[0] || {}), JSON.stringify(inv.rows), JSON.stringify(equip.rows), JSON.stringify(quests.rows)]
+  );
+  json(res, { saved: true, timestamp: new Date().toISOString() }, 201);
+});
+
 // ===== ROUTER =====
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
-  if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }
-  const url = req.url || "/";
-  for (const route of routes) { const matches = url.match(route.path); if (matches && req.method === route.method) { await route.handler(req, res, matches); return; } }
+  if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }
+  const url = req.url?.split("?")[0] || "/";
+  for (const route of routes) { const matches = url.match(route.path); if (matches && req.method === route.method) { try { await route.handler(req, res, matches); } catch (e: any) { console.error("[API]", e); json(res, { error: e.message }, 500); } return; } }
   json(res, { error: "not_found", path: url }, 404);
 }

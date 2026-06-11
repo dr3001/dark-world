@@ -130,3 +130,34 @@ autowrap_mode = 2
 text = "[E] Fechar"
 position = Vector2(1080, 160)
 modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="LevelLabel" type="Label" parent="HUD"]
+text = "Nv. 1"
+position = Vector2(25, 660)
+modulate = Color(1, 0.9, 0.4, 1)
+
+[node name="ZoriumLabel" type="Label" parent="HUD"]
+text = "0 Z"
+position = Vector2(120, 660)
+modulate = Color(0.4, 0.8, 1, 1)
+
+[node name="InventoryPanel" type="ColorRect" parent="HUD"]
+visible = false
+position = Vector2(320, 160)
+size = Vector2(640, 400)
+color = Color(0.06, 0.06, 0.10, 0.94)
+
+[node name="InventoryTitle" type="Label" parent="HUD/InventoryPanel"]
+text = "Inventario [I]"
+position = Vector2(20, 10)
+modulate = Color(1, 0.85, 0.4, 1)
+
+[node name="InventoryGrid" type="GridContainer" parent="HUD/InventoryPanel"]
+position = Vector2(20, 45)
+size = Vector2(600, 340)
+columns = 5
+
+[node name="InventoryHint" type="Label" parent="HUD/InventoryPanel"]
+text = "20 slots disponiveis"
+position = Vector2(20, 370)
+modulate = Color(0.6, 0.6, 0.6, 1)

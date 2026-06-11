@@ -8,6 +8,7 @@ var tree_count: int = 0; var house_count: int = 0; var npc_count: int = 0; var d
 var dialog_panel: ColorRect; var dialog_name_label: Label; var dialog_text_label: Label
 var interact_hint: Label; var dialog_open: bool = false; var nearest_npc: Node3D = null
 var quest_stage: int = 0
+var inventory_panel: ColorRect; var level_label: Label; var zorium_label: Label
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -25,6 +26,10 @@ func _ready():
 	dialog_name_label = get_node_or_null("HUD/DialogPanel/DialogName")
 	dialog_text_label = get_node_or_null("HUD/DialogPanel/DialogText")
 	interact_hint = get_node_or_null("HUD/InteractHint")
+	inventory_panel = get_node_or_null("HUD/InventoryPanel")
+	level_label = get_node_or_null("HUD/LevelLabel")
+	zorium_label = get_node_or_null("HUD/ZoriumLabel")
+	if inventory_panel: inventory_panel.visible = false
 	cam = $Camera3D
 	
 	_build_plaza()
@@ -427,6 +432,8 @@ func _process(delta):
 		if hp_bar and mhp > 0: hp_bar.size.x = 220 * (hp / mhp)
 	if player and pos_label:
 		pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))
+	if level_label: level_label.text = "Nv. 1"
+	if zorium_label: zorium_label.text = "0 Z"
 	if player and not dialog_open:
 		nearest_npc = null
 		var min_dist = 4.0
@@ -439,11 +446,15 @@ func _process(delta):
 			interact_hint.text = "[E] Conversar" if nearest_npc else ""
 
 func _unhandled_input(event):
-	if event is InputEventKey and event.keycode == KEY_E and event.pressed and not event.echo:
+	if not (event is InputEventKey and event.pressed and not event.echo): return
+	if event.keycode == KEY_E:
 		if dialog_open:
 			_close_dialog()
 		elif nearest_npc:
 			_open_dialog(nearest_npc)
+	elif event.keycode == KEY_I:
+		if inventory_panel:
+			inventory_panel.visible = !inventory_panel.visible
 
 func _open_dialog(npc: Node3D):
 	dialog_open = true

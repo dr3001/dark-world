@@ -50,3 +50,29 @@ func trigger_death(ent_id: String, callback: Callable):
 func trigger_return(ent_id: String, callback: Callable):
 	var body = JSON.stringify({"entity_id": ent_id})
 	_make_request(SERVER_URL + "/events/afterlife-returned", callback, "trigger_return", HTTPClient.METHOD_POST, body)
+
+func get_stats(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/stats", callback, "get_stats")
+
+func get_inventory(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/inventory", callback, "get_inventory")
+
+func get_equipment(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/equipment", callback, "get_equipment")
+
+func get_wallet(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/wallet", callback, "get_wallet")
+
+func get_items(callback: Callable):
+	_make_request(SERVER_URL + "/items", callback, "get_items")
+
+func get_quests(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/quests", callback, "get_quests")
+
+func accept_quest(char_id: String, quest_id: String, callback: Callable):
+	var b = JSON.stringify({"quest_id": quest_id})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/quests/accept", callback, "accept_quest", HTTPClient.METHOD_POST, b)
+
+func save_game(char_id: String, pos: Vector3, callback: Callable):
+	var b = JSON.stringify({"position": {"x": pos.x, "y": pos.y, "z": pos.z}})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/save", callback, "save_game", HTTPClient.METHOD_POST, b)
