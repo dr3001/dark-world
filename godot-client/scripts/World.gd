@@ -199,7 +199,7 @@ func _spawn_npc(pos: Vector3, npc_name: String, body_color: Color, npc_type: Str
 
 func _spawn_dragon():
 	var pos = Vector3(20, 0, 20)
-	var ds = load("res://scenes/models/Dragon.tscn")
+	var ds = load("res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/BlueDemon.gltf")
 	if ds:
 		var d = ds.instantiate()
 		d.name = "Vorak_o_Antigo"
