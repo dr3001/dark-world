@@ -22,6 +22,7 @@ var blood_fx = null; var impact_fx = null; var decal_fx = null
 var reaction_fx = null; var camera_fx = null; var audio_fx = null
 var vfx_event_system = null; var hit_ui = null; var shield_vfx = null
 var wind_vfx = null; var ground_vfx = null
+var climate_combat = null; var vfx_budget = null
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -146,6 +147,10 @@ func _ready():
 	if WindVFSScript: wind_vfx = WindVFSScript.new(); wind_vfx.name = "WindVFX"; add_child(wind_vfx)
 	var GroundVFSScript = load("res://scripts/GroundImpactSystem.gd")
 	if GroundVFSScript: ground_vfx = GroundVFSScript.new(); ground_vfx.name = "GroundVFX"; add_child(ground_vfx); ground_vfx.setup(impact_fx, decal_fx)
+	var ClimateScript = load("res://scripts/CombatClimateIntegration.gd")
+	if ClimateScript: climate_combat = ClimateScript.new(); climate_combat.name = "ClimateCombat"; add_child(climate_combat)
+	var BudgetScript = load("res://scripts/CombatVFXPerformanceBudget.gd")
+	if BudgetScript: vfx_budget = BudgetScript.new(); vfx_budget.name = "VFXBudget"; add_child(vfx_budget)
 	var MPScript = load("res://scripts/MultiplayerSync.gd")
 	if MPScript and net and player:
 		mp_sync = MPScript.new(); mp_sync.name = "MultiplayerSync"; add_child(mp_sync)
@@ -547,6 +552,8 @@ func _process(delta):
 	if auto_save_timer >= 60.0:
 		auto_save_timer = 0.0
 		_auto_save()
+	if climate_combat and world_sim:
+		climate_combat.update_weather(world_sim.weather_state, world_sim.temperature, world_sim.wind_speed)
 	if player and not dialog_open:
 		nearest_npc = null
 		var min_dist = 4.0

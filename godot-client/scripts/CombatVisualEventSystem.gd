@@ -16,6 +16,7 @@ func setup(blood, impact, decal, reaction, camera, audio_node):
 
 func trigger_event(event_type: String, data: Dictionary):
 	vfx_event.emit(event_type, data)
+	_log_to_server(event_type, data)
 	match event_type:
 		"HIT_LIGHT": _hit_light(data)
 		"HIT_MEDIUM": _hit_medium(data)
@@ -83,3 +84,14 @@ func _death_preview(d): var pos = _get_pos(d)
 
 func _get_pos(d: Dictionary) -> Vector3:
 	return d.get("position", Vector3.ZERO)
+
+func _log_to_server(event_type: String, data: Dictionary):
+	var important = ["CRITICAL_HIT", "DEATH_PREVIEW", "HIT_HEAVY"]
+	if event_type not in important: return
+	var http = HTTPRequest.new(); add_child(http)
+	http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
+	http.request("http://5.78.142.138:9000/combat-vfx/event/dev", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({
+		"staff_id": "dev_auto_log",
+		"event_type": event_type,
+		"position": {"x": data.get("position", Vector3.ZERO).x, "y": data.get("position", Vector3.ZERO).y, "z": data.get("position", Vector3.ZERO).z}
+	}))
