@@ -54,6 +54,7 @@ layout_mode = 3
 anchors_preset = 15
 
 [node name="HPBar" type="ColorRect" parent="HUD"]
+
 position = Vector2(20, 620)
 size = Vector2(200, 15)
 color = Color(0.8, 0.1, 0.1)
