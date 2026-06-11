@@ -41,7 +41,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "0.3.0", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "0.7.0", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -67,6 +67,9 @@ addRoute("POST", "/test/character", async (req, res) => {
   const name = b.character_name || "Heroi Teste";
   const ent = await query("INSERT INTO entities (id, world_id, entity_type, name, owner_account_id, position_x, position_y) VALUES (gen_random_uuid(), $1, $2, $3, $4, 100, 100) RETURNING *", [KNOWN_UUIDS.WORLD_LIVING, "player_character", name, b.account_id]);
   const chr = await query("INSERT INTO characters (id, account_id, entity_id, character_name, character_role, life_state) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5) RETURNING *", [b.account_id, ent.rows[0].id, name, b.character_role || "wanderer", "alive"]);
+  const cid = chr.rows[0].id;
+  await query("INSERT INTO character_stats (character_id, zorium) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
+  await query("INSERT INTO wallets (character_id, balance) VALUES ($1, 50) ON CONFLICT DO NOTHING", [cid]);
   json(res, { character: chr.rows[0], entity: ent.rows[0] }, 201);
 });
 

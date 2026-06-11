@@ -14,6 +14,7 @@ var tooltip_node = null; var inv_system = null; var combat_sys = null
 var loot_sys = null; var save_indicator: Label = null
 var equipment_panel_node: ColorRect; var journal_panel_node: ColorRect
 var character_id: String = ""; var auto_save_timer: float = 0.0
+var net = null
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -67,6 +68,9 @@ func _ready():
 	var LootScript = load("res://scripts/LootTable.gd")
 	if LootScript:
 		loot_sys = LootScript.new(); add_child(loot_sys)
+	var NetScript = load("res://scripts/NetworkClient.gd")
+	if NetScript:
+		net = NetScript.new(); net.name = "NetClient"; add_child(net)
 	cam = $Camera3D
 	
 	_build_plaza()
@@ -83,6 +87,7 @@ func _ready():
 	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
 	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
 	if quest_text: quest_text.text = "Explore o Vale Cinzento"
+	_load_character_data()
 
 # ===== PLAZA =====
 func _build_plaza():
@@ -545,36 +550,80 @@ func _handle_dialog_key(keycode: int):
 		if keycode == KEY_F:
 			_forge_item()
 
-func _heal_player():
-	if not char_profile: return
-	if not char_profile.spend_zorium(5.0):
-		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente."
+func _load_character_data():
+	if not net or character_id == "":
+		print("[WORLD] No character_id — skipping server load")
 		return
-	char_profile.heal_full()
-	if dialog_text_label: dialog_text_label.text = "Curada! HP restaurado."
+	print("[WORLD] Loading character data: ", character_id)
+	net.get_stats(character_id, func(data):
+		if data and data.has("stats") and char_profile:
+			char_profile.load_from_server(data["stats"])
+			print("[WORLD] Stats loaded — Level:", char_profile.get_stat("level"), " Zorium:", char_profile.get_stat("zorium"))
+	)
+	net.get_inventory(character_id, func(data):
+		if data and data.has("inventory") and inv_system:
+			inv_system.load_from_server(data["inventory"])
+			print("[WORLD] Inventory loaded — ", data["inventory"].size(), " items")
+	)
+	net.get_equipment(character_id, func(data):
+		if data and data.has("equipment") and equip_panel_ui:
+			equip_panel_ui.load_from_server(data["equipment"])
+			print("[WORLD] Equipment loaded")
+	)
+	net.get_quests(character_id, func(data):
+		if data and data.has("quests") and journal:
+			journal.load_from_server(data["quests"])
+			print("[WORLD] Quests loaded — ", data["quests"].size(), " quests")
+	)
+
+func _heal_player():
+	if not net or character_id == "":
+		if dialog_text_label: dialog_text_label.text = "Erro: sem conexao."
+		return
+	if dialog_text_label: dialog_text_label.text = "Curando..."
+	net.heal_character(character_id, func(data):
+		if data and data.has("healed"):
+			if char_profile:
+				char_profile.heal_full()
+				if data.has("stats"):
+					char_profile.set_stat("zorium", float(data["stats"].get("zorium", 0)))
+			if dialog_text_label: dialog_text_label.text = "Curada! HP restaurado. (-5 Z)"
+		elif data and data.has("error"):
+			if dialog_text_label: dialog_text_label.text = str(data["error"])
+	)
 
 func _forge_item():
 	if not char_profile: return
 	if not char_profile.spend_zorium(30.0):
-		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente."
+		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente. (30 Z)"
 		return
 	if dialog_text_label: dialog_text_label.text = "Espada de Ferro forjada!"
+	var iron_sword_id = "c0000000-0000-0000-0000-000000000009"
 	if inv_system:
 		inv_system.add_item(inv_system.get_used_count(), {
 			"item_name": "Espada de Ferro", "item_type": "weapon",
 			"rarity": "uncommon", "slot_type": "weapon",
 			"base_stats": {"attack": 8, "speed": 0.9, "critical": 0.03},
-			"quantity": 1
+			"quantity": 1, "item_id": iron_sword_id
 		})
+	if net and character_id != "":
+		net.add_to_inventory(character_id, iron_sword_id, 1, func(_d): pass)
 
 func _manual_save():
+	if not net or character_id == "" or not player: return
 	if save_indicator: save_indicator.text = "Salvando..."
 	if save_indicator: save_indicator.visible = true
-	await get_tree().create_timer(2.0).timeout
-	if save_indicator: save_indicator.visible = false
+	net.save_game(character_id, player.global_position, func(data):
+		print("[WORLD] Save result: ", data)
+		await get_tree().create_timer(1.5).timeout
+		if save_indicator: save_indicator.visible = false
+	)
 
 func _auto_save():
+	if not net or character_id == "" or not player: return
 	if save_indicator: save_indicator.text = "Auto-save..."
 	if save_indicator: save_indicator.visible = true
-	await get_tree().create_timer(1.5).timeout
-	if save_indicator: save_indicator.visible = false
+	net.save_game(character_id, player.global_position, func(_data):
+		await get_tree().create_timer(1.0).timeout
+		if save_indicator: save_indicator.visible = false
+	)
