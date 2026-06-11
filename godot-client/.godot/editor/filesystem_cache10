@@ -1,5 +1,5 @@
 72322a848ab928aa5c89f0cb78209805
-::res://::1781139271
+::res://::1781142565
 BuildInfo.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
 export_presets.cfg::TextFile::-1::1781133180::0::1::::<><><>0<>0<><>::
 Version.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
@@ -21,9 +21,10 @@ World.tscn::PackedScene::1731413958864674568::1781142209::0::1::::<><><>0<>0<><>
 ::res://scenes/models/::1781141237
 Dragon.tscn::PackedScene::4309138898425749425::1781141313::0::1::::<><><>0<>0<><>::res://scripts/DragonModel.gd<>res://scripts/DragonAI.gd
 Player.tscn::PackedScene::8773535813890285320::1781141237::0::1::::<><><>0<>0<><>::res://scripts/PlayerModel.gd
-::res://scenes/test/::1781137806
+::res://scenes/test/::1781142563
+DragonTest.tscn::PackedScene::-1::1781142563::0::1::::<><><>0<>0<><>::res://scripts/test/DragonTest.gd
 TestLoader.tscn::PackedScene::-1::1781137806::0::1::::<><><>0<>0<><>::res://scripts/test/TestLoader.gd
-::res://scripts/::1781141427
+::res://scripts/::1781142674
 Afterlife.gd::GDScript::6352262381114264116::1781137106::0::1::::<>Node3D<><>0<>0<><>::
 CameraController.gd::GDScript::497302004675368759::1781141253::0::1::::<>Camera3D<><>0<>0<><>::
 DragonAI.gd::GDScript::7231944850016780473::1781141471::0::1::::<>Node3D<><>0<>0<><>::
@@ -36,7 +37,8 @@ PlayerController.gd::GDScript::5622841169375636981::1781141253::0::1::::<>Charac
 PlayerModel.gd::GDScript::6234382764538736845::1781141237::0::1::::<>Node3D<><>0<>0<><>::
 QuestSystem.gd::GDScript::2970021575417554408::1781141313::0::1::::<>Node<><>0<>0<><>::
 TerrainBuilder.gd::GDScript::4362131768288800160::1781141278::0::1::::<>Node3D<><>0<>0<><>::
-World.gd::GDScript::2723746501345195831::1781142360::0::1::::<>Node3D<><>0<>0<><>::
+World.gd::GDScript::2723746501345195831::1781142700::0::1::::<>Node3D<><>0<>0<><>::
 WorldState.gd::GDScript/GDScript::4745681722969762690::1781125123::0::1::::<>Node<><>0<>0<><>::
-::res://scripts/test/::1781137840
+::res://scripts/test/::1781142702
+DragonTest.gd::GDScript::7086646723013348122::1781142563::0::1::::<>Node3D<><>0<>0<><>::
 TestLoader.gd::GDScript::3518368183702803958::1781137806::0::1::::<>Node<><>0<>0<><>::

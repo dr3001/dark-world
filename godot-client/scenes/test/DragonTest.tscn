@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/test/DragonTest.gd" id="1_test"]
+
+[node name="DragonTest" type="Node3D"]
+script = ExtResource("1_test")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 10, 20)
+rotation = Vector3(-0.4, 0, 0)
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+position = Vector3(10, 20, 10)
