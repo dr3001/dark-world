@@ -77,6 +77,10 @@ func _ready():
 	var CombatScript = load("res://scripts/CombatSystem.gd")
 	if CombatScript:
 		combat_sys = CombatScript.new(); add_child(combat_sys)
+		combat_sys.hit_dealt.connect(_on_hit_dealt)
+		combat_sys.critical_hit.connect(_on_critical_hit)
+		combat_sys.target_died.connect(_on_target_died)
+		combat_sys.target_blocked.connect(_on_target_blocked)
 	var LootScript = load("res://scripts/LootTable.gd")
 	if LootScript:
 		loot_sys = LootScript.new(); add_child(loot_sys)
@@ -708,7 +712,29 @@ func _auto_save():
 	net.save_game(character_id, player.global_position, func(_data): pass)
 	_hide_save_indicator(1.0)
 
-func _show_profile():
+func _on_hit_dealt(target: Node3D, damage: float, impact_type: String):
+	if impact_fx: impact_fx.spawn_impact(impact_type, target.global_position + Vector3(0, 1, 0))
+	if blood_fx: blood_fx.splash_small(target.global_position + Vector3(0, 1, 0))
+	if camera_fx: camera_fx.shake_light()
+	if audio_fx: audio_fx.play_hit("medium")
+
+func _on_critical_hit(target: Node3D, damage: float):
+	if impact_fx: impact_fx.spawn_impact("fire", target.global_position + Vector3(0, 1, 0), Vector3.UP)
+	if blood_fx: blood_fx.splash_heavy(target.global_position + Vector3(0, 1, 0))
+	if decal_fx: decal_fx.spawn_decal("blood", target.global_position)
+	if camera_fx: camera_fx.critical_flash()
+	if audio_fx: audio_fx.play_critical()
+
+func _on_target_died(target: Node3D, killer: Node3D):
+	if blood_fx: blood_fx.burst(target.global_position)
+	if decal_fx: decal_fx.spawn_decal("blood", target.global_position)
+	if camera_fx: camera_fx.shake_heavy()
+	if audio_fx: audio_fx.play_death()
+
+func _on_target_blocked(target: Node3D):
+	if impact_fx: impact_fx.spawn_impact("shield", target.global_position + Vector3(0, 1, 0))
+	if camera_fx: camera_fx.block_flash()
+	if audio_fx: audio_fx.play_block()
 	if character_id == "" or not dialog_panel: return
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):

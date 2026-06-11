@@ -69,11 +69,51 @@ func _physics_process(delta):
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		_attack()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		_block()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
+		_release_block()
+
+func _block():
+	var cs = get_node_or_null("../CombatSystem")
+	if cs and cs.has_method("try_block"): cs.try_block()
+	pass
+
+func _release_block():
+	var cs = get_node_or_null("../CombatSystem")
+	if cs and cs.has_method("release_block"): cs.release_block()
+	pass
 
 func _attack():
-	var now = Time.get_ticks_msec() / 1000.0
-	if now - last_attack_time < attack_cooldown:
-		return
+	var cs = get_node_or_null("../CombatSystem")
+	if not cs or not cs.has_method("try_attack"): return
+	if not cs.try_attack(): return
+	var space = get_world_3d().direct_space_state
+	var query = PhysicsShapeQueryParameters3D.new()
+	var sphere = SphereShape3D.new()
+	sphere.radius = 4.0
+	query.shape = sphere
+	query.transform = Transform3D(Basis(), global_position)
+	var results = space.intersect_shape(query)
+	var best_target: Node3D = null
+	var best_dist = 99.0
+	for result in results:
+		var collider = result.get("collider")
+		if not collider: continue
+		if collider == self: continue
+		if collider is CharacterBody3D and collider != self: best_target = collider; break
+		var parent = collider.get_parent()
+		while parent:
+			if parent.has_method("take_damage"):
+				var d = global_position.distance_to(parent.global_position)
+				if d < best_dist: best_dist = d; best_target = parent
+				break
+			parent = parent.get_parent()
+	if not best_target: cs.state = 0; return
+	var stats = {"strength": 5, "luck": 1}
+	var result = cs.resolve_hit(best_target, self, stats)
+	if not result.get("hit"): return
+	cs.apply_damage(best_target, result, self)
 	last_attack_time = now
 	
 	# Find nearest dragon within range
@@ -96,4 +136,11 @@ func take_damage(amount: float):
 	hp = max(hp - amount, 0)
 	print("[COMBAT] Player took ", amount, " damage. HP: ", hp)
 	if hp <= 0:
-		print("[COMBAT] Player died!")
+		die()
+
+func die():
+	print("[COMBAT] Player died!")
+	hp = max_hp
+	mana = max_mana
+	global_position = Vector3(0, 5, 0)
+	velocity = Vector3.ZERO
