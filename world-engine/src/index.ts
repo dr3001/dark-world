@@ -40,6 +40,7 @@ import { LiveWindowModule } from "./modules/live-window/LiveWindowModule.js";
 import { TrustEngineModule } from "./modules/trust-engine/TrustEngineModule.js";
 import { FraudEngineModule } from "./modules/fraud-engine/FraudEngineModule.js";
 import { AntiCheatModule } from "./modules/anti-cheat/AntiCheatModule.js";
+import { GovernanceModule } from "./modules/governance/GovernanceModule.js";
 import { handleRequest } from "./api.js";
 import { createServer } from "http";
 import { config } from "./config.js";
@@ -95,6 +96,7 @@ async function main() {
   engine.registerModule(new TrustEngineModule());
   engine.registerModule(new FraudEngineModule());
   engine.registerModule(new AntiCheatModule());
+  engine.registerModule(new GovernanceModule());
 
   engine.eventEngine.registerHandler("CHARACTER_DIED", (e) => deathMod.handleDeath(e));
   engine.eventEngine.registerHandler("AFTERLIFE_ENTERED", (e) => afterlifeMod.handleAfterlifeEntered(e));

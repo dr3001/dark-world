@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "5.0.0-zero-trust", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule","TwitchModule","AICoachModule","LiveWindowModule","TrustEngineModule","FraudEngineModule","AntiCheatModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "5.0.0-zero-trust", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule","TwitchModule","AICoachModule","LiveWindowModule","TrustEngineModule","FraudEngineModule","AntiCheatModule","GovernanceModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -453,10 +453,110 @@ addRoute("POST", "/admin/ban", async (req, res) => {
   const b = await body(req);
   if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
   if (!b.user_id || !b.ban_type) return json(res, { error: "user_id and ban_type required" }, 400);
-  await query("INSERT INTO ban_records (user_id, staff_id, ban_type, reason, expires_at) VALUES ($1,$2,$3,$4,$5)", [b.user_id, b.staff_id || null, b.ban_type, b.reason || "", b.expires_at || null]);
+  const isPerm = b.ban_type === "perm_ban";
+  await query("INSERT INTO ban_records (user_id, staff_id, ban_type, reason, expires_at, violation_type, owner_only) VALUES ($1,$2,$3,$4,$5,$6,$7)", [b.user_id, b.staff_id || null, b.ban_type, b.reason || "", b.expires_at || null, b.violation_type, isPerm]);
   await query("UPDATE accounts_profile SET is_banned = true, status = 'banned' WHERE id = $1", [b.user_id]);
   await query("INSERT INTO moderation_logs (staff_id, target_user_id, action, reason) VALUES ($1::uuid,$2,$3,$4)", [b.staff_id, b.user_id, 'ban_' + b.ban_type, b.reason || ""]);
-  json(res, { banned: true });
+  json(res, { banned: true, owner_only: isPerm });
+});
+
+addRoute("POST", "/admin/unban", async (req, res) => {
+  const b = await body(req);
+  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized: staff role required" }, 403);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  const permBans = (await query("SELECT * FROM ban_records WHERE user_id = $1 AND is_active = true AND owner_only = true", [b.user_id])).rows;
+  if (permBans.length > 0) {
+    const staff = (await query("SELECT role FROM accounts_profile WHERE id = $1", [b.staff_id])).rows[0];
+    if (staff?.role !== "owner") return json(res, { error: "Only OWNER can remove permanent bans" }, 403);
+  }
+  await query("UPDATE ban_records SET is_active = false WHERE user_id = $1", [b.user_id]);
+  await query("UPDATE accounts_profile SET is_banned = false, status = 'active' WHERE id = $1", [b.user_id]);
+  await query("INSERT INTO moderation_logs (staff_id, target_user_id, action, reason) VALUES ($1::uuid,$2,'unban','Unbanned')", [b.staff_id, b.user_id]);
+  json(res, { unbanned: true });
+});
+
+// ===== GOVERNANCE =====
+
+addRoute("POST", "/auth/accept-terms", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  await query("INSERT INTO terms_acceptance (user_id, terms_version, privacy_version, ip) VALUES ($1,'1.0.0','1.0.0',$2) ON CONFLICT DO NOTHING", [b.user_id, (req.headers["x-forwarded-for"] as string) || "unknown"]);
+  json(res, { accepted: true });
+});
+
+addRoute("GET", "/auth/terms-status", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!b.user_id) return json(res, { accepted: false });
+  const r = (await query("SELECT * FROM terms_acceptance WHERE user_id = $1 ORDER BY accepted_at DESC LIMIT 1", [b.user_id])).rows[0];
+  json(res, { accepted: !!r, terms: r || null });
+});
+
+addRoute("PUT", "/auth/kyc", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  if (b.phone) await query("UPDATE accounts_profile SET phone = $1 WHERE id = $2", [b.phone, b.user_id]);
+  if (b.birthdate) await query("UPDATE accounts_profile SET birthdate = $1 WHERE id = $2", [b.birthdate, b.user_id]);
+  if (b.city) await query("UPDATE accounts_profile SET city = $1 WHERE id = $2", [b.city, b.user_id]);
+  json(res, { updated: true });
+});
+
+addRoute("GET", "/violations", async (_req, res) => {
+  json(res, { violations: (await query("SELECT * FROM violation_catalog ORDER BY category, severity DESC")).rows });
+});
+
+addRoute("GET", "/forum/categories", async (_req, res) => {
+  json(res, { categories: (await query("SELECT * FROM forum_categories ORDER BY sort_order")).rows });
+});
+
+addRoute("GET", "/forum/threads", async (_req, res) => {
+  json(res, { threads: (await query("SELECT ft.*, ap.display_name, fc.name as category_name FROM forum_threads ft JOIN accounts_profile ap ON ft.user_id = ap.id JOIN forum_categories fc ON ft.category_id = fc.id ORDER BY ft.is_pinned DESC, ft.updated_at DESC LIMIT 50")).rows });
+});
+
+addRoute("POST", "/forum/threads", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id || !b.category_id || !b.title || !b.content) return json(res, { error: "user_id, category_id, title, content required" }, 400);
+  const t = (await query("INSERT INTO forum_threads (category_id, user_id, title) VALUES ($1,$2,$3) RETURNING *", [b.category_id, b.user_id, b.title])).rows[0];
+  await query("INSERT INTO forum_posts (thread_id, user_id, content) VALUES ($1,$2,$3)", [t.id, b.user_id, b.content]);
+  json(res, { thread: t }, 201);
+});
+
+addRoute("POST", "/forum/posts", async (req, res) => {
+  const b = await body(req);
+  if (!b.thread_id || !b.user_id || !b.content) return json(res, { error: "thread_id, user_id, content required" }, 400);
+  const p = (await query("INSERT INTO forum_posts (thread_id, user_id, content) VALUES ($1,$2,$3) RETURNING *", [b.thread_id, b.user_id, b.content])).rows[0];
+  await query("UPDATE forum_threads SET updated_at = NOW() WHERE id = $1", [b.thread_id]);
+  json(res, { post: p }, 201);
+});
+
+addRoute("POST", "/tickets", async (req, res) => {
+  const b = await body(req);
+  if (!b.user_id || !b.title || !b.category) return json(res, { error: "user_id, title, category required" }, 400);
+  const t = (await query("INSERT INTO tickets (user_id, category, title) VALUES ($1,$2,$3) RETURNING *", [b.user_id, b.category, b.title])).rows[0];
+  await query("INSERT INTO ticket_messages (ticket_id, user_id, content) VALUES ($1,$2,$3)", [t.id, b.user_id, b.message || b.title]);
+  json(res, { ticket: t }, 201);
+});
+
+addRoute("GET", "/tickets", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  if (!b.user_id) return json(res, { tickets: [] });
+  json(res, { tickets: (await query("SELECT * FROM tickets WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 50", [b.user_id])).rows });
+});
+
+addRoute("POST", "/chat/translate", async (req, res) => {
+  const b = await body(req);
+  if (!b.text) return json(res, { error: "text required" }, 400);
+  const provider = process.env.AI_API_KEY ? "deepseek" : "offline";
+  if (provider === "offline") return json(res, { translated: b.text, provider: "offline" });
+  try {
+    const aiRes = await fetch(process.env.AI_ENDPOINT + "/chat/completions", {
+      method: "POST", headers: { "Authorization": "Bearer " + process.env.AI_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: process.env.AI_MODEL || "deepseek-chat", messages: [{ role: "system", content: "Translate this to Portuguese. Output only the translation." }, { role: "user", content: b.text }], max_tokens: 200, temperature: 0.3 })
+    });
+    const aiData = await aiRes.json() as any;
+    const translated = aiData?.choices?.[0]?.message?.content || b.text;
+    await query("INSERT INTO chat_translations (message_id, original_language, target_language, original_text, translated_text, provider) VALUES ($1,'auto','pt',$2,$3,'deepseek')", [b.message_id || null, b.text, translated]);
+    json(res, { translated, provider: "deepseek" });
+  } catch { json(res, { translated: b.text, provider: "error" }); }
 });
 
 addRoute("POST", "/admin/unban", async (req, res) => {
