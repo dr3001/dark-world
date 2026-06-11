@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule","TwitchModule","AICoachModule","LiveWindowModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -863,6 +863,60 @@ addRoute("POST", "/characters/([^/]+)/class", async (req, res, matches) => {
 
 addRoute("GET", "/troops/types", async (_req, res) => {
   json(res, { troop_types: (await query("SELECT * FROM troop_types ORDER BY category, name")).rows });
+});
+
+// ===== TWITCH + AI + LIVE WINDOWS =====
+
+addRoute("GET", "/twitch/status", async (req, res) => {
+  const b = await body(req).catch(() => ({})); const uid = b.user_id as string;
+  if (uid) { const link = (await query("SELECT twitch_login, status, expires_at FROM twitch_account_links WHERE user_id=$1", [uid])).rows[0]; return json(res, { linked: !!link, ...link, mode: process.env.TWITCH_CLIENT_ID ? "oauth_ready" : "not_configured" }); }
+  json(res, { linked: false, mode: process.env.TWITCH_CLIENT_ID ? "oauth_ready" : "not_configured" });
+});
+
+addRoute("POST", "/twitch/link", async (req, res) => {
+  const b = await body(req); if (!b.user_id || !b.twitch_user_id || !b.access_token) return json(res, { error: "user_id, twitch_user_id, access_token required" }, 400);
+  await query("INSERT INTO twitch_account_links (user_id,twitch_user_id,twitch_login,twitch_display_name,access_token_encrypted,scopes,expires_at) VALUES ($1,$2,$3,$4,$5,$6,NOW()+INTERVAL'4 hours') ON CONFLICT (user_id) DO UPDATE SET access_token_encrypted=$5,scopes=$6,expires_at=NOW()+INTERVAL'4 hours'", [b.user_id, b.twitch_user_id, b.twitch_login||"", b.twitch_display_name||"", b.access_token, b.scopes||[]]);
+  json(res, { linked: true });
+});
+
+addRoute("GET", "/twitch/overlay/([^/]+)", async (_req, res, matches) => {
+  const overlay = (await query("SELECT * FROM streamer_overlays WHERE overlay_token=$1 AND is_active=true", [matches[1]])).rows[0];
+  json(res, { overlay: overlay || null });
+});
+
+addRoute("POST", "/twitch/overlay/create", async (req, res) => {
+  const b = await body(req); if (!b.user_id) return json(res, { error: "user_id required" }, 400);
+  const token = require("crypto").randomBytes(16).toString("hex");
+  const r = await query("INSERT INTO streamer_overlays (user_id, overlay_token, scene_type) VALUES ($1,$2,$3) RETURNING *", [b.user_id, token, b.scene_type||"player_profile"]);
+  json(res, { overlay: r.rows[0] });
+});
+
+addRoute("POST", "/ai/transcription/start", async (req, res) => {
+  const b = await body(req);
+  const r = await query("INSERT INTO ai_transcription_sessions (user_id, character_id, started_at, status) VALUES ($1,$2,NOW(),'active') RETURNING *", [b.user_id||null, b.character_id||null]);
+  json(res, { session: r.rows[0], mode: process.env.AI_API_KEY ? "ai" : "not_configured" });
+});
+
+addRoute("POST", "/ai/coaching/start", async (req, res) => {
+  const b = await body(req);
+  const r = await query("INSERT INTO ai_coaching_sessions (user_id, character_id, coaching_type, context, started_at) VALUES ($1,$2,$3,$4,NOW()) RETURNING *", [b.user_id||null, b.character_id||null, b.coaching_type||"profile", JSON.stringify(b.context||{})]);
+  json(res, { session: r.rows[0], mode: process.env.AI_API_KEY ? "ai" : "not_configured" });
+});
+
+addRoute("GET", "/live-windows/products", async (_req, res) => {
+  json(res, { products: (await query("SELECT * FROM live_window_products")).rows, mode: process.env.STRIPE_SECRET_KEY ? "live" : "sandbox" });
+});
+
+addRoute("POST", "/live-windows/create", async (req, res) => {
+  const b = await body(req); if (!b.user_id || !b.product_id) return json(res, { error: "user_id and product_id required" }, 400);
+  const p = (await query("SELECT * FROM live_window_products WHERE id=$1", [b.product_id])).rows[0]; if (!p) return json(res, { error: "Product not found" }, 404);
+  const r = await query("INSERT INTO live_windows (user_id, window_type, status, starts_at, ends_at, duration_minutes, max_streams) VALUES ($1,$2,'pending_payment',NOW(),NOW()+($3||' minutes')::interval,$3,$4) RETURNING *", [b.user_id, p.window_type, p.duration_minutes, p.max_streams]);
+  json(res, { window: r.rows[0], mode: process.env.STRIPE_SECRET_KEY ? "live" : "sandbox" });
+});
+
+addRoute("GET", "/live-windows/me", async (req, res) => {
+  const b = await body(req).catch(() => ({}));
+  json(res, { windows: (await query("SELECT * FROM live_windows WHERE user_id=$1 ORDER BY created_at DESC", [b.user_id])).rows, mode: process.env.STRIPE_SECRET_KEY ? "live" : "sandbox" });
 });
 
 // ===== PUBLIC API v1 + LAUNCHER =====
