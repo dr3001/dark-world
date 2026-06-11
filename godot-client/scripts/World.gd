@@ -9,11 +9,11 @@ var dialog_panel: ColorRect; var dialog_name_label: Label; var dialog_text_label
 var interact_hint: Label; var dialog_open: bool = false; var nearest_npc: Node3D = null
 var quest_stage: int = 0
 var npc_dialogs: Dictionary = {
-	"Guardiao_do_Vale": "Bem-vindo ao Vale Cinzento.\nO dragao Vorak voltou.\nFale com o ferreiro antes de partir.",
-	"Ferreiro_Thorin": "Vorak destruiu minha forja anterior.\nPegue esta espada. Vai precisar.\nBoa sorte, guerreiro.",
-	"Mercador_Ivan": "Pocoes? Armaduras? Tudo por um preco justo.\n(Em breve)",
-	"Curandeira_Lyra": "Posso curar suas feridas.\nVolte quando precisar.\n(Em breve)",
-	"Campones_Finn": "Cuidado com o dragao ao leste.\nEle devora qualquer um que se aproxima."
+	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
+	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
+	"Mercador_Ivan": "Tenho mercadorias para viajantes.",
+	"Curandeira_Lyra": "Vorak ameaca o Vale Cinzento.\nDerrote-o antes que seja tarde.",
+	"Campones_Finn": "A vida era mais tranquila antes de Vorak."
 }
 
 func _ready():
@@ -84,6 +84,7 @@ func _bench(pos: Vector3, angle: float):
 	_box_on(b, Vector3(3, 0.3, 0.8), Color(0.35, 0.22, 0.12, 1), Vector3(0, 0.8, 0))
 	_box_on(b, Vector3(0.2, 0.6, 0.2), Color(0.30, 0.18, 0.10, 1), Vector3(1.2, 0.4, 0))
 	_box_on(b, Vector3(0.2, 0.6, 0.2), Color(0.30, 0.18, 0.10, 1), Vector3(-1.2, 0.4, 0))
+	_static_box(b, Vector3(3, 1.0, 0.8), Vector3(0, 0.5, 0))
 	add_child(b)
 
 # ===== PLAYER =====
@@ -187,8 +188,8 @@ func _cart(pos: Vector3):
 			cyl.top_radius = 0.5; cyl.bottom_radius = 0.5; cyl.height = 0.2; wheel.mesh = cyl
 			wheel.set_surface_override_material(0, _mat(Color(0.25, 0.18, 0.12, 1)))
 			wheel.rotation_degrees = Vector3(90, 0, 0); wheel.position = Vector3(wx, 0.5, wz); c.add_child(wheel)
-	# Shafts
 	_box_on(c, Vector3(0.2, 0.2, 2.5), Color(0.30, 0.20, 0.12, 1), Vector3(0, 1.5, -2.5))
+	_static_box(c, Vector3(2.5, 1.5, 3), Vector3(0, 0.75, 0))
 	add_child(c)
 
 # ===== CASTLE =====
@@ -208,8 +209,12 @@ func _build_castle():
 	for i in range(30):
 		var a = float(i) * PI * 2.0 / 30.0
 		var r = 20.0
-		var w = _box_on(c, Vector3(1, 7, 3), dark, Vector3(cos(a) * r, 3.5, sin(a) * r))
+		var wpos = Vector3(cos(a) * r, 3.5, sin(a) * r)
+		var w = _box_on(c, Vector3(1, 7, 3), dark, wpos)
 		w.rotation.y = a + PI / 2.0
+		var wsb = StaticBody3D.new(); wsb.position = wpos; wsb.rotation.y = a + PI / 2.0
+		var wcol = CollisionShape3D.new(); var wbs = BoxShape3D.new(); wbs.size = Vector3(1, 7, 3)
+		wcol.shape = wbs; wsb.add_child(wcol); c.add_child(wsb)
 	var banner = MeshInstance3D.new(); var bp = BoxMesh.new(); bp.size = Vector3(0.1, 5, 2); banner.mesh = bp
 	var bm = StandardMaterial3D.new(); bm.albedo_color = Color(0.80, 0.10, 0.10, 1)
 	banner.set_surface_override_material(0, bm); banner.position = Vector3(0, 20, 0); c.add_child(banner)
@@ -226,12 +231,13 @@ func _spawn_dragon():
 		var d = ds.instantiate(); d.name = "Vorak_o_Antigo"
 		d.position = pos; d.scale = Vector3(6, 6, 6); d.rotation_degrees = Vector3(0, 90, 0)
 		add_child(d); dragon_count += 1
-		# HP label
+		var sb = StaticBody3D.new(); sb.position = Vector3(0, 1.5, 0)
+		var col = CollisionShape3D.new(); var bs = BoxShape3D.new(); bs.size = Vector3(4, 3, 6)
+		col.shape = bs; sb.add_child(col); d.add_child(sb)
 		var lbl = Label3D.new(); lbl.text = "VORAK, O ANTIGO\nHP: 100/100"
 		lbl.position = Vector3(0, 8, 0); lbl.font_size = 44
 		lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED; lbl.modulate = Color(1, 0.15, 0.15, 1)
 		d.add_child(lbl)
-		# Red circle below
 		var circle = MeshInstance3D.new(); var cyl = CylinderMesh.new()
 		cyl.top_radius = 3.0; cyl.bottom_radius = 3.0; cyl.height = 0.05; circle.mesh = cyl
 		var cm = StandardMaterial3D.new(); cm.albedo_color = Color(0.90, 0.10, 0.10, 0.5)
@@ -243,6 +249,9 @@ func _spawn_dragon():
 
 func _fallback_dragon(pos: Vector3):
 	var d = Node3D.new(); d.name = "Vorak"; d.position = pos; d.scale = Vector3(6, 6, 6); d.rotation_degrees = Vector3(0, 90, 0)
+	var sb = StaticBody3D.new(); sb.position = Vector3(0, 2.5, 0)
+	var col = CollisionShape3D.new(); var fcs = CapsuleShape3D.new(); fcs.radius = 2.0; fcs.height = 7.0
+	col.shape = fcs; sb.add_child(col); d.add_child(sb)
 	var c = Color(0.55, 0.08, 0.08, 1)
 	_capsule2(d, 1.6, 7, c, Vector3(0, 2.5, 0))
 	_sphere2(d, 1.4, c, Vector3(0, 3.0, -4.5))
@@ -276,8 +285,10 @@ func _spawn_npcs():
 		npc_count += 1
 
 func _npc(pos: Vector3, npc_name: String, title: String, body_color: Color):
-	var n = Node3D.new(); n.name = npc_name.replace(" ", "_"); n.position = pos
+	var n = StaticBody3D.new(); n.name = npc_name.replace(" ", "_"); n.position = pos
 	n.add_to_group("npc")
+	var col = CollisionShape3D.new(); var cs = CapsuleShape3D.new(); cs.radius = 0.5; cs.height = 2.0
+	col.shape = cs; col.position = Vector3(0, 1.0, 0); n.add_child(col)
 	_capsule2(n, 0.45, 1.3, body_color, Vector3(0, 1.5, 0))
 	_sphere2(n, 0.37, Color(0.85, 0.70, 0.55, 1), Vector3(0, 2.4, 0))
 	_capsule2(n, 0.13, 0.85, body_color, Vector3(0.58, 1.6, 0))
@@ -298,10 +309,13 @@ func _build_trees():
 		_tree(Vector3(cos(a) * r, 0, sin(a) * r), 1.0)
 		tree_count += 1
 
-func _tree(pos: Vector3, scale: float):
-	var t = Node3D.new(); t.position = pos; t.scale = Vector3(scale, scale, scale)
+func _tree(pos: Vector3, sc: float):
+	var t = Node3D.new(); t.position = pos; t.scale = Vector3(sc, sc, sc)
 	var h = randf_range(5, 10)
 	_cyl(t, 0.3, h, Color(0.38, 0.22, 0.10, 1), Vector3(0, h/2, 0))
+	var sb = StaticBody3D.new(); sb.position = Vector3(0, h / 2, 0)
+	var col = CollisionShape3D.new(); var cs = CylinderShape3D.new(); cs.radius = 0.5; cs.height = h
+	col.shape = cs; sb.add_child(col); t.add_child(sb)
 	for j in range(4):
 		var s = 3.5 - float(j) * 0.7
 		_sphere2(t, s * 0.5, Color(0.06, 0.35 + randf() * 0.30, 0.06, 1), Vector3(randf_range(-0.5, 0.5), h + float(j) * 1.5, randf_range(-0.5, 0.5)))
@@ -341,6 +355,9 @@ func _build_rocks():
 		var sz = randf_range(0.5, 3.0)
 		var rock = Node3D.new(); rock.position = pos
 		_sphere2(rock, sz, Color(0.45 + randf() * 0.15, 0.42 + randf() * 0.1, 0.38 + randf() * 0.1, 1), Vector3(0, sz * 0.4, 0))
+		var sb = StaticBody3D.new(); sb.position = Vector3(0, sz * 0.4, 0)
+		var col = CollisionShape3D.new(); var ss = SphereShape3D.new(); ss.radius = sz * 0.5
+		col.shape = ss; sb.add_child(col); rock.add_child(sb)
 		rock.rotation.y = randf() * PI * 2.0
 		add_child(rock)
 
@@ -419,7 +436,7 @@ func _process(delta):
 				min_dist = d
 				nearest_npc = npc
 		if interact_hint:
-			interact_hint.text = "[E] Falar" if nearest_npc else ""
+			interact_hint.text = "[E] Conversar" if nearest_npc else ""
 
 func _unhandled_input(event):
 	if event is InputEventKey and event.keycode == KEY_E and event.pressed and not event.echo:
@@ -442,9 +459,9 @@ func _close_dialog():
 	if dialog_panel: dialog_panel.visible = false
 
 func _advance_quest(npc_id: String):
-	if npc_id == "Guardiao_do_Vale" and quest_stage == 0:
+	if npc_id == "Curandeira_Lyra" and quest_stage == 0:
 		quest_stage = 1
-		if quest_text: quest_text.text = "Missao: Fale com o Ferreiro Thorin"
-	elif npc_id == "Ferreiro_Thorin" and quest_stage <= 1:
-		quest_stage = 2
-		if quest_text: quest_text.text = "Missao: Derrote Vorak, o Antigo"
+		if quest_text: quest_text.text = "MISSAO INICIADA\nDerrote Vorak, o Antigo"
+		await get_tree().create_timer(3.0).timeout
+		if quest_text and quest_stage == 1:
+			quest_text.text = "MISSAO: Derrote Vorak, o Antigo"

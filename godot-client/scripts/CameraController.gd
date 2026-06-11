@@ -14,22 +14,21 @@ func _ready():
 func _process(delta):
 	if not target: return
 	
-	# Mouse scroll zoom
 	if Input.is_action_just_pressed("zoom_in"):
 		distance -= 2.0
 	if Input.is_action_just_pressed("zoom_out"):
 		distance += 2.0
 	distance = clamp(distance, min_distance, max_distance)
 	
-	# Calculate target position behind and above player
 	var target_pos = target.global_position
 	var cam_target = target_pos + Vector3(0, height, distance)
+	var sf = 1.0 - exp(-smooth_speed * delta)
+	global_position = global_position.lerp(cam_target, sf)
 	
-	# Smooth follow
-	global_position = global_position.lerp(cam_target, smooth_speed * delta)
-	
-	# Look at player
-	look_at(target_pos + Vector3(0, 1.5, 0))
+	var look_target = target_pos + Vector3(0, 1.5, 0)
+	if global_position.distance_to(look_target) > 0.1:
+		var target_xform = global_transform.looking_at(look_target)
+		global_transform.basis = global_transform.basis.slerp(target_xform.basis, sf)
 
 func _input(event):
 	if event is InputEventMouseButton:

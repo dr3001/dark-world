@@ -4,6 +4,9 @@ extends CharacterBody3D
 @export var run_speed: float = 10.0
 @export var jump_velocity: float = 8.0
 @export var gravity: float = 20.0
+@export var accel: float = 25.0
+@export var decel: float = 18.0
+@export var rot_speed: float = 10.0
 @export var attack_range: float = 4.0
 @export var attack_damage: float = 15.0
 @export var attack_cooldown: float = 0.5
@@ -46,13 +49,13 @@ func _physics_process(delta):
 	is_moving = input_dir != Vector3.ZERO
 	
 	if input_dir != Vector3.ZERO:
-		velocity.x = input_dir.x * current_speed
-		velocity.z = input_dir.z * current_speed
-		# Face movement direction
-		look_at(global_position + input_dir, Vector3.UP)
+		velocity.x = move_toward(velocity.x, input_dir.x * current_speed, accel * delta)
+		velocity.z = move_toward(velocity.z, input_dir.z * current_speed, accel * delta)
+		var target_angle = atan2(input_dir.x, -input_dir.z)
+		rotation.y = lerp_angle(rotation.y, target_angle, rot_speed * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, current_speed)
-		velocity.z = move_toward(velocity.z, 0, current_speed)
+		velocity.x = move_toward(velocity.x, 0, decel * delta)
+		velocity.z = move_toward(velocity.z, 0, decel * delta)
 	
 	move_and_slide()
 	
