@@ -78,10 +78,17 @@ curl -s https://dark.zorionlabs.net/dw-api/api/launcher/status | jq .
 
 ## Evidência coletada nesta sessão (servidor)
 
-- Portal home atualizado: CTA único launcher
-- CI workflow: `.github/workflows/build-launcher.yml` (windows-latest + macos-latest)
-- Pipeline tag: `.github/workflows/release-pipeline.yml`
-- Godot re-export: executar `publish-release.sh` — ver timestamp portable.zip vs Main.gd
-- Binário Tauri: aguardar GitHub Actions → `scripts/fetch-github-launcher.sh`
+| Check | Status | Evidência |
+|-------|--------|-----------|
+| Portal home CTA launcher | OK | `/var/www/zorionlabs/dark/index.html` → `DarkWorld-Launcher-Setup.exe` |
+| Game installer removido da home | OK | `DarkWorld-Windows-Setup.exe` → `/downloads/archive/` |
+| Godot re-export v5.0.5 | OK | portable.zip `2026-06-11 23:31 UTC`, hash `0cbc8c38...` |
+| Manifest 5 arquivos válidos | OK | `validate-manifest.py` passou |
+| API launcher status | OK | `game_version: 5.0.5`, `server: online` |
+| Node CLI arquivado | OK | `/opt/darkworld/archive/launcher-node-cli/` |
+| Tauri GUI no CDN | **PENDENTE** | CI run #16+ — executar `bash /opt/darkworld/scripts/fetch-github-launcher.sh` |
+| Teste humano Win/Mac | **PENDENTE** | Requer screenshot do tester |
 
-**Status automatizado:** Pendente build CI + teste humano com screenshot.
+**Comando pós-CI:** `bash /opt/darkworld/scripts/fetch-github-launcher.sh`
+
+**Status automatizado:** Infra + portal + jogo OK. Binário Tauri aguardando CI (~10 min).
