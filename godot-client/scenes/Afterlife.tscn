@@ -1,6 +1,9 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3 uid="uid://afterlife00000000000001"]
+
+[ext_resource type="Script" path="res://scripts/Afterlife.gd" id="1_afterlife"]
 
 [node name="Afterlife" type="Node3D"]
+script = ExtResource("1_afterlife")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 position = Vector3(0, 12, 15)

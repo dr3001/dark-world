@@ -1,6 +1,9 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3 uid="uid://world00000000000000001"]
+
+[ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
 
 [node name="World" type="Node3D"]
+script = ExtResource("1_world")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 position = Vector3(0, 12, 15)
@@ -27,7 +30,7 @@ bbcode_enabled = true
 scroll_following = true
 
 [node name="StatusBar" type="Label" parent="HUD"]
-text = "Vale Cinzento | Vivo"
+text = "Vale Cinzento"
 position = Vector2(0, 690)
 size = Vector2(1280, 30)
 horizontal_alignment = 1
