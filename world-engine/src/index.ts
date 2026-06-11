@@ -33,6 +33,7 @@ import { KingdomWarModule } from "./modules/kingdom-war/KingdomWarModule.js";
 import { TroopModule } from "./modules/troop/TroopModule.js";
 import { TerritoryMapModule } from "./modules/territory-map/TerritoryMapModule.js";
 import { LoreModule } from "./modules/lore/LoreModule.js";
+import { PublicApiModule } from "./modules/public-api/PublicApiModule.js";
 import { handleRequest } from "./api.js";
 import { createServer } from "http";
 import { config } from "./config.js";
@@ -81,6 +82,7 @@ async function main() {
   engine.registerModule(new TroopModule());
   engine.registerModule(new TerritoryMapModule());
   engine.registerModule(new LoreModule());
+  engine.registerModule(new PublicApiModule());
 
   engine.eventEngine.registerHandler("CHARACTER_DIED", (e) => deathMod.handleDeath(e));
   engine.eventEngine.registerHandler("AFTERLIFE_ENTERED", (e) => afterlifeMod.handleAfterlifeEntered(e));

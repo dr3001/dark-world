@@ -1,7 +1,7 @@
 import { IncomingMessage, ServerResponse } from "http";
 import { query } from "./db.js";
 import { config, KNOWN_UUIDS } from "./config.js";
-import { randomBytes, scryptSync } from "crypto";
+import { randomBytes, scryptSync, createHash } from "crypto";
 
 interface Route {
   method: string;
@@ -48,7 +48,7 @@ addRoute("POST", "/auth/restore", async (req, res) => {
 // ===== GAME ROUTES =====
 
 addRoute("GET", "/health", async (_req, res) => {
-  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule"] });
+  json(res, { status: "ok", uptime: process.uptime(), version: "3.0.0-war", modules: ["DeathModule","AfterlifeModule","DragonModule","TerritoryModule","FactionModule","AuditModule","CharacterStatsModule","ItemModule","InventoryModule","EquipmentModule","WalletModule","QuestModule","NPCModule","CombatPrepModule","LootModule","VIPModule","StoreModule","ChatModule","ClanModule","RankingModule","AdminModule","EventModule","AIProviderModule","AuthRealModule","FriendsModule","MultiplayerModule","SecurityLogModule","WorldSimulationModule","ClassModule","WarModule","KingdomWarModule","TroopModule","TerritoryMapModule","LoreModule","PublicApiModule"] });
 });
 
 addRoute("GET", "/worlds", async (_req, res) => {
@@ -863,6 +863,67 @@ addRoute("POST", "/characters/([^/]+)/class", async (req, res, matches) => {
 
 addRoute("GET", "/troops/types", async (_req, res) => {
   json(res, { troop_types: (await query("SELECT * FROM troop_types ORDER BY category, name")).rows });
+});
+
+// ===== PUBLIC API v1 + LAUNCHER =====
+
+async function checkApiKey(req: IncomingMessage): Promise<{ ok: boolean; clientId?: string }> {
+  const auth = req.headers["authorization"] as string || "";
+  if (!auth.startsWith("Bearer ")) return { ok: true }; // allow unauthenticated for public endpoints
+  const key = auth.slice(7);
+  const clients = (await query("SELECT * FROM public_api_clients WHERE status = 'active'")).rows;
+  for (const client of clients) {
+    const hash = createHash("sha256").update(key).digest("hex");
+    if (client.client_secret_hash === hash || key === client.client_secret_hash) {
+      await query("INSERT INTO public_api_usage_logs (client_id, endpoint, request_ip) VALUES ($1,$2,$3)", [client.id, req.url || "/", (req.headers["x-forwarded-for"] as string) || "unknown"]);
+      return { ok: true, clientId: client.id };
+    }
+  }
+  return { ok: false };
+}
+
+addRoute("GET", "/api/public/v1/health", async (req, res) => {
+  const auth = await checkApiKey(req);
+  json(res, { status: "ok", mode: auth.clientId ? "authenticated" : "public", version: "1.0.0" });
+});
+
+addRoute("GET", "/api/public/v1/world/state", async (_req, res) => {
+  const wid = KNOWN_UUIDS.WORLD_LIVING;
+  const time = (await query("SELECT hour, day, month, year, season FROM world_time WHERE world_id = $1", [wid])).rows[0];
+  const weather = (await query("SELECT state, temperature, humidity, wind_speed, visibility FROM world_weather WHERE world_id = $1", [wid])).rows[0];
+  json(res, { time, weather });
+});
+
+addRoute("GET", "/api/public/v1/characters/([^/]+)/profile", async (_req, res, matches) => {
+  const c = (await query("SELECT c.character_name, cs.level, cs.xp, cs.zorium, ap.display_name, ap.role, ap.vip_level, co.origin_name, hc.name as class_name FROM characters c JOIN character_stats cs ON cs.character_id=c.id JOIN accounts_profile ap ON ap.id=c.account_id LEFT JOIN character_origins co ON co.character_id=c.id LEFT JOIN hero_classes hc ON co.class_id=hc.id WHERE c.id=$1", [matches[1]])).rows[0];
+  const rep = (await query("SELECT reputation_score FROM character_reputation WHERE character_id=$1 AND target_type='world'", [matches[1]])).rows[0];
+  json(res, { character: { ...c, reputation: rep?.reputation_score || 0 } });
+});
+
+addRoute("GET", "/api/public/v1/rankings/global", async (_req, res) => {
+  json(res, { rankings: (await query("SELECT re.*, ap.display_name FROM ranking_entries re JOIN accounts_profile ap ON re.user_id=ap.id ORDER BY re.score DESC LIMIT 50")).rows });
+});
+
+addRoute("GET", "/api/public/v1/lore/characters/([^/]+)", async (_req, res, matches) => {
+  const bio = (await query("SELECT origin_name, birth_homeland, public_biography FROM character_biographies WHERE character_id=$1", [matches[1]])).rows[0];
+  const timeline = (await query("SELECT event_type, title, description, created_at FROM character_timeline WHERE character_id=$1 ORDER BY created_at DESC LIMIT 10", [matches[1]])).rows;
+  json(res, { bio, timeline });
+});
+
+addRoute("GET", "/api/launcher/status", async (_req, res) => {
+  const online = (await query("SELECT count(*)::int as online FROM online_sessions WHERE is_online=true AND last_heartbeat > NOW()-INTERVAL '10 seconds'")).rows[0].online;
+  const m = (await query("SELECT * FROM scheduled_maintenance WHERE status IN ('scheduled','active') ORDER BY starts_at LIMIT 1")).rows[0];
+  json(res, { server: "online", players_online: online, maintenance: m || null, game_version: "3.2.0-lore", server_name: "Vale Cinzento" });
+});
+
+addRoute("GET", "/api/launcher/manifest", async (_req, res) => {
+  const m = (await query("SELECT * FROM launcher_manifests ORDER BY published_at DESC LIMIT 1")).rows[0];
+  json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: m?.game_version || "0.0.0", launcher_version: m?.launcher_version || "0.0.0" });
+});
+
+addRoute("GET", "/api/launcher/news", async (_req, res) => {
+  const ann = (await query("SELECT * FROM server_announcements WHERE expires_at > NOW() ORDER BY priority DESC LIMIT 5")).rows;
+  json(res, { news: ann });
 });
 
 // ===== ROUTER =====
