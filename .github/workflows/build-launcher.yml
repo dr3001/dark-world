@@ -26,6 +26,10 @@ jobs:
         working-directory: launcher
         run: npm ci || npm install
 
+      - name: Generate Tauri icons
+        working-directory: launcher
+        run: npx tauri icon src-tauri/icons/icon.png
+
       - name: Build Tauri Windows
         working-directory: launcher
         run: npm run build
@@ -64,6 +68,10 @@ jobs:
       - name: Install npm deps
         working-directory: launcher
         run: npm ci || npm install
+
+      - name: Generate Tauri icons
+        working-directory: launcher
+        run: npx tauri icon src-tauri/icons/icon.png
 
       - name: Build Tauri macOS universal
         working-directory: launcher
