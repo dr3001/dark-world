@@ -20,6 +20,8 @@ var world_sim = null; var time_label: Label; var weather_label_node: Label
 var class_label: Label; var server_label: Label
 var blood_fx = null; var impact_fx = null; var decal_fx = null
 var reaction_fx = null; var camera_fx = null; var audio_fx = null
+var vfx_event_system = null; var hit_ui = null; var shield_vfx = null
+var wind_vfx = null; var ground_vfx = null
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -132,6 +134,18 @@ func _ready():
 	if CameraFxScript: camera_fx = CameraFxScript.new(); camera_fx.name = "CameraFX"; add_child(camera_fx); camera_fx.setup(cam)
 	var AudioFxScript = load("res://scripts/CombatAudioSystem.gd")
 	if AudioFxScript: audio_fx = AudioFxScript.new(); audio_fx.name = "AudioFX"; add_child(audio_fx)
+	var VFSEventScript = load("res://scripts/CombatVisualEventSystem.gd")
+	if VFSEventScript:
+		vfx_event_system = VFSEventScript.new(); vfx_event_system.name = "VFXEvents"; add_child(vfx_event_system)
+		vfx_event_system.setup(blood_fx, impact_fx, decal_fx, reaction_fx, camera_fx, audio_fx)
+	var HitUIScript = load("res://scripts/HitFeedbackUI.gd")
+	if HitUIScript: hit_ui = HitUIScript.new(); hit_ui.name = "HitUI"; add_child(hit_ui)
+	var ShieldVFSScript = load("res://scripts/ShieldImpactVisualSystem.gd")
+	if ShieldVFSScript: shield_vfx = ShieldVFSScript.new(); shield_vfx.name = "ShieldVFX"; add_child(shield_vfx); shield_vfx.setup(impact_fx, audio_fx, camera_fx)
+	var WindVFSScript = load("res://scripts/ProjectileWindInfluenceVisual.gd")
+	if WindVFSScript: wind_vfx = WindVFSScript.new(); wind_vfx.name = "WindVFX"; add_child(wind_vfx)
+	var GroundVFSScript = load("res://scripts/GroundImpactSystem.gd")
+	if GroundVFSScript: ground_vfx = GroundVFSScript.new(); ground_vfx.name = "GroundVFX"; add_child(ground_vfx); ground_vfx.setup(impact_fx, decal_fx)
 	var MPScript = load("res://scripts/MultiplayerSync.gd")
 	if MPScript and net and player:
 		mp_sync = MPScript.new(); mp_sync.name = "MultiplayerSync"; add_child(mp_sync)
@@ -713,28 +727,23 @@ func _auto_save():
 	_hide_save_indicator(1.0)
 
 func _on_hit_dealt(target: Node3D, damage: float, impact_type: String):
-	if impact_fx: impact_fx.spawn_impact(impact_type, target.global_position + Vector3(0, 1, 0))
-	if blood_fx: blood_fx.splash_small(target.global_position + Vector3(0, 1, 0))
-	if camera_fx: camera_fx.shake_light()
-	if audio_fx: audio_fx.play_hit("medium")
+	if vfx_event_system:
+		vfx_event_system.trigger_event("HIT_MEDIUM", {"position": target.global_position + Vector3(0, 1, 0), "direction": Vector3.RIGHT})
+	if hit_ui: hit_ui.show_floating_text(target.global_position, "-" + str(int(damage)), Color(1, 0.8, 0.3))
 
 func _on_critical_hit(target: Node3D, damage: float):
-	if impact_fx: impact_fx.spawn_impact("fire", target.global_position + Vector3(0, 1, 0), Vector3.UP)
-	if blood_fx: blood_fx.splash_heavy(target.global_position + Vector3(0, 1, 0))
-	if decal_fx: decal_fx.spawn_decal("blood", target.global_position)
-	if camera_fx: camera_fx.critical_flash()
-	if audio_fx: audio_fx.play_critical()
+	if vfx_event_system:
+		vfx_event_system.trigger_event("CRITICAL_HIT", {"position": target.global_position + Vector3(0, 1, 0)})
+	if hit_ui: hit_ui.show_critical(target.global_position, damage)
 
 func _on_target_died(target: Node3D, killer: Node3D):
-	if blood_fx: blood_fx.burst(target.global_position)
-	if decal_fx: decal_fx.spawn_decal("blood", target.global_position)
-	if camera_fx: camera_fx.shake_heavy()
-	if audio_fx: audio_fx.play_death()
+	if vfx_event_system:
+		vfx_event_system.trigger_event("DEATH_PREVIEW", {"position": target.global_position})
+	if ground_vfx: ground_vfx.ground_impact(target.global_position, "earth")
 
 func _on_target_blocked(target: Node3D):
-	if impact_fx: impact_fx.spawn_impact("shield", target.global_position + Vector3(0, 1, 0))
-	if camera_fx: camera_fx.block_flash()
-	if audio_fx: audio_fx.play_block()
+	if shield_vfx: shield_vfx.block_light(target.global_position)
+	if hit_ui: hit_ui.show_blocked(target.global_position)
 	if character_id == "" or not dialog_panel: return
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):
