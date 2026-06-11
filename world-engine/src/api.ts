@@ -753,8 +753,9 @@ addRoute("POST", "/admin/force-time", async (req, res) => {
 });
 
 addRoute("GET", "/admin/security-logs", async (req, res) => {
-  const b = await body(req);
-  if (!await isStaff(b.staff_id)) return json(res, { error: "Unauthorized" }, 403);
+  const url = new URL(req.url || "/", "http://localhost");
+  const sid = url.searchParams.get("staff_id");
+  if (!await isStaff(sid)) return json(res, { error: "Unauthorized: staff_id required" }, 403);
   json(res, { logs: (await query("SELECT sl.*,ap.display_name FROM security_logs sl LEFT JOIN accounts_profile ap ON sl.user_id=ap.id ORDER BY sl.created_at DESC LIMIT 50")).rows });
 });
 
