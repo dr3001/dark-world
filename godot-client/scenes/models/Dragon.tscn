@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://c00000000000000000000000000050"]
+[gd_scene load_steps=3 format=3 uid="uid://c00000000000000000000000000050"]
 
-[ext_resource type="Script" path="res://scripts/DragonModel.gd" id="1_dragon"]
+[ext_resource type="Script" path="res://scripts/DragonModel.gd" id="1_dragon_model"]
+[ext_resource type="Script" path="res://scripts/DragonAI.gd" id="2_dragon_ai"]
 
 [node name="Dragon" type="Node3D"]
-script = ExtResource("1_dragon")
+script = ExtResource("2_dragon_ai")
+
+[node name="DragonModel" type="Node3D" parent="."]
+script = ExtResource("1_dragon_model")

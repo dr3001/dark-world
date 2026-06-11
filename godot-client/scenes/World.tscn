@@ -1,36 +1,40 @@
-[gd_scene load_steps=4 format=3 uid="uid://world00000000000000001"]
+[gd_scene load_steps=6 format=3 uid="uid://world00000000000000001"]
 
 [ext_resource type="Script" path="res://scripts/World.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/CameraController.gd" id="2_camera"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(500, 500)
 
 [sub_resource type="StandardMaterial3D" id="mat_ground"]
-albedo_color = Color(0.3, 0.3, 0.35, 1)
+albedo_color = Color(0.25, 0.25, 0.3, 1)
 roughness = 0.9
 
 [sub_resource type="Environment" id="env_default"]
-background_mode = 1
+background_mode = 2
 background_color = Color(0.05, 0.05, 0.08, 1)
 ambient_light_source = 1
 ambient_light_color = Color(0.3, 0.3, 0.4, 1)
+fog_enabled = true
+fog_mode = 1
+fog_density = 0.003
+fog_light_color = Color(0.4, 0.4, 0.5, 1)
 tonemap_mode = 0
 
 [node name="World" type="Node3D"]
 script = ExtResource("1_world")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-position = Vector3(0, 15, 20)
-rotation = Vector3(-0.6, 0, 0)
+position = Vector3(0, 12, 20)
+rotation = Vector3(-0.5, 0, 0)
 current = true
 fov = 70
-near = 0.05
-far = 4000.0
+script = ExtResource("2_camera")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-position = Vector3(10, 30, 10)
-rotation = Vector3(-0.8, 0.3, 0)
-light_energy = 2.0
+position = Vector3(50, 60, 30)
+rotation = Vector3(-0.8, 0.5, 0)
+light_energy = 2.5
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -40,34 +44,53 @@ environment = SubResource("env_default")
 position = Vector3(0, -0.1, 0)
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = SubResource("mat_ground")
+
+[node name="TerrainBuilder" type="Node3D" parent="."]
+
 [node name="EntitySpawner" type="Node3D" parent="."]
 
 [node name="HUD" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 
+[node name="HPBar" type="ColorRect" parent="HUD"]
+position = Vector2(20, 620)
+size = Vector2(200, 15)
+color = Color(0.8, 0.1, 0.1)
+
+[node name="HPBarBG" type="ColorRect" parent="HUD"]
+position = Vector2(18, 618)
+size = Vector2(204, 19)
+color = Color(0.1, 0.1, 0.1)
+
+[node name="ManaBar" type="ColorRect" parent="HUD"]
+position = Vector2(20, 640)
+size = Vector2(200, 10)
+color = Color(0.1, 0.3, 0.9)
+
+[node name="PlayerName" type="Label" parent="HUD"]
+text = "Heroi do Vale"
+position = Vector2(25, 595)
+
+[node name="HPText" type="Label" parent="HUD"]
+text = "HP: 100/100"
+position = Vector2(25, 618)
+
+[node name="FPS" type="Label" parent="HUD"]
+text = "FPS: 0"
+position = Vector2(1210, 10)
+
+[node name="QuestText" type="Label" parent="HUD"]
+text = "Missao: Derrote Vorak, o Antigo"
+position = Vector2(800, 680)
+
+[node name="Position" type="Label" parent="HUD"]
+text = "0, 0, 0"
+position = Vector2(25, 655)
+
 [node name="EventLog" type="RichTextLabel" parent="HUD"]
 position = Vector2(10, 10)
 size = Vector2(400, 200)
 bbcode_enabled = true
 scroll_following = true
-
-[node name="StatusBar" type="Label" parent="HUD"]
-text = "Vale Cinzento"
-position = Vector2(0, 690)
-size = Vector2(1280, 30)
-horizontal_alignment = 1
-
-[node name="DebugPanel" type="Panel" parent="HUD"]
-position = Vector2(10, 620)
-size = Vector2(300, 60)
-
-[node name="KillButton" type="Button" parent="HUD/DebugPanel"]
-text = "[DEBUG] Matar Personagem (K)"
-position = Vector2(5, 5)
-size = Vector2(290, 25)
-
-[node name="ReturnButton" type="Button" parent="HUD/DebugPanel"]
-text = "[DEBUG] Retornar dos Mortos (R)"
-position = Vector2(5, 32)
-size = Vector2(290, 25)
+visible = false

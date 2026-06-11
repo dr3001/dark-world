@@ -1,114 +1,157 @@
 extends Node3D
 
+var player: CharacterBody3D
+var quest_system: Node
+var hp_bar: ColorRect
+var mana_bar: ColorRect
+var hp_text: Label
+var fps_label: Label
+var quest_text: Label
+var pos_label: Label
+var cam: Camera3D
+
 func _ready():
 	print("[WORLD] _ready() START")
 	
-	# Load NetworkClient
+	# Get HUD references
+	hp_bar = get_node_or_null("HUD/HPBar")
+	mana_bar = get_node_or_null("HUD/ManaBar")
+	hp_text = get_node_or_null("HUD/HPText")
+	fps_label = get_node_or_null("HUD/FPS")
+	quest_text = get_node_or_null("HUD/QuestText")
+	pos_label = get_node_or_null("HUD/Position")
+	cam = $Camera3D
+	
+	# Create quest system
+	quest_system = Node.new()
+	quest_system.name = "QuestSystem"
+	quest_system.set_script(load("res://scripts/QuestSystem.gd"))
+	add_child(quest_system)
+	
+	# Build terrain
+	var tb = get_node_or_null("TerrainBuilder")
+	if tb:
+		tb.set_script(load("res://scripts/TerrainBuilder.gd"))
+	
+	# Spawn player
+	_spawn_player()
+	
+	# Load network client and fetch entities
 	var ns = load("res://scripts/NetworkClient.gd")
 	if ns:
 		var net = ns.new()
-		net.name = "DiagNetwork"
+		net.name = "Network"
 		add_child(net)
-		print("[WORLD] Network loaded")
-		
-		# Check camera
-		var cam = $Camera3D
-		print("[WORLD] Camera found: ", cam != null, " current: ", cam.current if cam else "N/A")
-		print("[WORLD] Camera pos: ", cam.global_position if cam else "N/A")
-		
-		# Spawn player
-		var player = CharacterBody3D.new()
-		player.name = "Player"
-		var mesh = MeshInstance3D.new()
-		var box = BoxMesh.new()
-		box.size = Vector3(1, 2, 1)
-		mesh.mesh = box
-		var mat = StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 0.8, 0.2)
-		mesh.set_surface_override_material(0, mat)
-		player.add_child(mesh)
-		var coll = CollisionShape3D.new()
-		var cshape = BoxShape3D.new()
-		cshape.size = Vector3(1, 2, 1)
-		coll.shape = cshape
-		player.add_child(coll)
-		player.position = Vector3(0, 2, 0)
-		var ps = load("res://scripts/PlayerController.gd")
-		if ps: player.set_script(ps)
-		add_child(player)
-		print("[WORLD] Player spawned at: ", player.global_position)
-		
-		# Force camera to look at (0,0,0) where geometry is
-		if cam:
-			cam.look_at(Vector3(0, 0, 0))
-			print("[WORLD] Camera looking at origin")
-		
-		# Connect HUD buttons
-		var kb = get_node_or_null("HUD/DebugPanel/KillButton")
-		var rb = get_node_or_null("HUD/DebugPanel/ReturnButton")
-		if kb: kb.pressed.connect(func(): print("[WORLD] KILL"))
-		if rb: rb.pressed.connect(func(): print("[WORLD] RETURN"))
-		
-		# Load world entities
 		net.get_entities("a0000000-0000-0000-0000-000000000001", _on_entities)
 		net.get_dragons(_on_dragons)
 		print("[WORLD] HTTP requests sent")
-	else:
-		print("[WORLD] ERROR: NetworkClient script not found!")
-	
-	# Verify scene has visible geometry
-	await get_tree().process_frame
-	var meshes = []
-	_find_meshes(self, meshes)
-	print("[WORLD] Total MeshInstance3D in scene: ", meshes.size())
-	for m in meshes:
-		print("[WORLD]   ", m.get_path(), " mesh=", m.mesh, " visible=", m.visible)
 	
 	print("[WORLD] _ready() DONE")
 
+func _spawn_player():
+	player = CharacterBody3D.new()
+	player.name = "Player"
+	player.add_to_group("player_group")
+	
+	# Load procedural player model
+	var player_scene = load("res://scenes/models/Player.tscn")
+	if player_scene:
+		var model = player_scene.instantiate()
+		model.name = "PlayerModel"
+		player.add_child(model)
+	
+	var coll = CollisionShape3D.new()
+	var cshape = CapsuleShape3D.new()
+	cshape.radius = 0.5
+	cshape.height = 2.0
+	coll.shape = cshape
+	player.add_child(coll)
+	
+	player.position = Vector3(0, 2, 0)
+	
+	var ps = load("res://scripts/PlayerController.gd")
+	if ps: player.set_script(ps)
+	
+	add_child(player)
+	
+	# Set camera target
+	if cam: cam.target = player
+	
+	print("[WORLD] Player spawned at ", player.global_position)
 
 func _on_entities(data):
 	if data == null or not data is Dictionary or not data.has("entities"):
 		return
 	for e in data["entities"]:
-		var et = e.get("entity_type", "?")
+		var et = e.get("entity_type", "")
 		var px = float(e.get("position_x", 0)) / 10.0
 		var pz = float(e.get("position_y", 0)) / 10.0
-		var mi = MeshInstance3D.new()
-		var b = BoxMesh.new()
+		var nm = e.get("name", "")
+		var eid = e.get("id", "")
+		
 		if et == "dragon":
 			var dragon_scene = load("res://scenes/models/Dragon.tscn")
 			if dragon_scene:
 				var dragon = dragon_scene.instantiate()
+				dragon.name = nm
 				dragon.position = Vector3(px, 0, pz)
+				if dragon.has_method("_ready"): pass  # ensure name_tag is set
 				add_child(dragon)
-				return
-			b.size = Vector3(10, 5, 10)
-			mi.mesh = b
-			var m = StandardMaterial3D.new(); m.albedo_color = Color(1, 0, 0)
-			mi.set_surface_override_material(0, m)
-			mi.position = Vector3(px, 2.5, pz)
+				print("[WORLD] Dragon spawned: ", nm, " at ", dragon.position)
+		elif et == "player_character":
+			if nm != "Heroi Mac" and nm.find("Auditor") == -1:
+				# Spawn other players as simple figures
+				var npc = _make_colored_box(Vector3(0.8, 1.8, 0.8), Color(0.3, 0.5, 0.8), Vector3(px, 1, pz))
+				add_child(npc)
 		elif et == "territory":
-			b.size = Vector3(30, 0.2, 30)
-			mi.mesh = b
-			var m = StandardMaterial3D.new(); m.albedo_color = Color(0.5, 0.5, 0.5)
-			mi.set_surface_override_material(0, m)
-			mi.position = Vector3(px, -0.1, pz)
-		else:
-			b.size = Vector3(1, 2, 1)
-			mi.mesh = b
-			var m = StandardMaterial3D.new(); m.albedo_color = Color(0, 1, 0)
-			mi.set_surface_override_material(0, m)
-			mi.position = Vector3(px, 1, pz)
-		add_child(mi)
-
+			var t = _make_colored_box(Vector3(20, 0.1, 20), Color(0.3, 0.3, 0.3, 0.4), Vector3(px, 0, pz))
+			t.name = nm
+			add_child(t)
 
 func _on_dragons(data):
-	pass
+	if data != null and data.has("dragons"):
+		for d in data["dragons"]:
+			print("[WORLD] Dragon data: ", d.get("dragon_name", "?"))
+			
+			# Check if the dragon already exists in the scene (spawned via entities)
+			var existing = get_node_or_null(d.get("dragon_name", ""))
+			if existing:
+				# Set name on existing dragon
+				var dragon = get_node_or_null(d.get("dragon_name", ""))
+				pass
 
+func _make_colored_box(size: Vector3, color: Color, pos: Vector3) -> MeshInstance3D:
+	var mi = MeshInstance3D.new()
+	var box = BoxMesh.new(); box.size = size
+	mi.mesh = box
+	var mat = StandardMaterial3D.new(); mat.albedo_color = color
+	if color.a < 1.0:
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mi.set_surface_override_material(0, mat)
+	mi.position = pos
+	return mi
 
-func _find_meshes(node, result):
-	if node is MeshInstance3D:
-		result.append(node)
-	for c in node.get_children():
-		_find_meshes(c, result)
+func _process(delta):
+	if fps_label:
+		fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
+	
+	if player:
+		var pc = player.get_script()
+		if pc:
+			var hp_val = pc.get("hp") if pc.get("hp") != null else 100.0
+			var max_hp_val = pc.get("max_hp") if pc.get("max_hp") != null else 100.0
+			var mana_val = pc.get("mana") if pc.get("mana") != null else 50.0
+			var max_mana_val = pc.get("max_mana") if pc.get("max_mana") != null else 50.0
+			
+			if hp_bar:
+				hp_bar.size.x = 200 * (hp_val / max_hp_val)
+				hp_bar.color = Color(0.8, hp_val / max_hp_val * 0.8, hp_val / max_hp_val * 0.8)
+			if mana_bar:
+				mana_bar.size.x = 200 * (mana_val / max_mana_val)
+			if hp_text:
+				hp_text.text = "HP: " + str(int(hp_val)) + "/" + str(int(max_hp_val))
+			if pos_label:
+				pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))
+	
+	if quest_system and quest_text:
+		quest_text.text = quest_system.get_quest_text()

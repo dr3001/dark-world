@@ -14,3 +14,11 @@ textures/vram_compression/import_etc2_astc=true
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
+
+[input]
+zoom_in={
+"events": [Object(InputEventMouseButton,"button_index": 5)]
+}
+zoom_out={
+"events": [Object(InputEventMouseButton,"button_index": 4)]
+}
