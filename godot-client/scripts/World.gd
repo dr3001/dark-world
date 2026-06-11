@@ -46,6 +46,25 @@ func _ready():
 	inventory_panel = get_node_or_null("HUD/InventoryPanel")
 	level_label = get_node_or_null("HUD/LevelLabel")
 	zorium_label = get_node_or_null("HUD/ZoriumLabel")
+	cam = $Camera3D
+	
+	# BUILD WORLD FIRST — before any script loading
+	# This ensures Windows gets the same world as Mac
+	print("[WORLD] Building world...")
+	_build_plaza()
+	_spawn_player()
+	_build_village()
+	_build_walls()
+	_build_rocks()
+	_spawn_npcs()
+	_build_castle()
+	_spawn_dragon()
+	_build_trees()
+	_build_road_torches()
+	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
+	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
+	
+	# NOW load optional systems
 	if inventory_panel: inventory_panel.visible = false
 	equipment_panel_node = get_node_or_null("HUD/EquipmentPanel")
 	journal_panel_node = get_node_or_null("HUD/JournalPanel")
@@ -98,21 +117,7 @@ func _ready():
 	if ChatScript:
 		chat_display = ChatScript.new(); add_child(chat_display)
 		chat_display.setup(chat_panel_node)
-	cam = $Camera3D
 	
-	_build_plaza()
-	_spawn_player()
-	_build_village()
-	_build_walls()
-	_build_rocks()
-	_spawn_npcs()
-	_build_castle()
-	_spawn_dragon()
-	_build_trees()
-	_build_road_torches()
-	
-	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
-	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
 	if quest_text: quest_text.text = "Explore o Vale Cinzento"
 	online_label = get_node_or_null("HUD/OnlineCount")
 	class_label = get_node_or_null("HUD/ClassLabel")
