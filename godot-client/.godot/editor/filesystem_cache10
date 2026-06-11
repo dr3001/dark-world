@@ -13,9 +13,9 @@ Version.txt::TextFile/TextFile::-1::1781125694::0::1::::<><><>0<>0<><>::
 ::res://assets/quaternius/props/::1781141985
 ::res://docs/::1781125164
 GODOT_IMPORT_COMPATIBILITY.md::TextFile/TextFile::-1::1781125164::0::1::::<><><>0<>0<><>::
-::res://scenes/::1781143009
+::res://scenes/::1781144470
 Afterlife.tscn::PackedScene::5486015816436539144::1781136485::0::1::::<><><>0<>0<><>::res://scripts/Afterlife.gd
-Login.tscn::PackedScene::2756292848498450184::1781131930::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
+Login.tscn::PackedScene::2756292848498450184::1781144470::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
 Main.tscn::PackedScene/PackedScene::-1::1781127607::0::1::::<><><>0<>0<><>::
 World.tscn::PackedScene::1731413958864674568::1781144027::0::1::::<><><>0<>0<><>::res://scripts/World.gd<>res://scripts/CameraController.gd
 ::res://scenes/models/::1781141237
