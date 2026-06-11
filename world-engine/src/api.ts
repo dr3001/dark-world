@@ -552,6 +552,27 @@ addRoute("POST", "/auth/login", async (req, res) => {
   json(res, { token, user: { id: user.id, email: user.email, display_name: user.display_name, role: user.role, vip_level: user.vip_level } });
 });
 
+addRoute("POST", "/auth/change-password", async (req, res) => {
+  const b = await body(req);
+  if (!b.email || !b.current_password || !b.new_password) return json(res, { error: "email, current_password, new_password required" }, 400);
+  const user = (await query("SELECT * FROM accounts_profile WHERE email = $1", [b.email])).rows[0];
+  if (!user || !user.password_hash) return json(res, { error: "Invalid credentials" }, 401);
+  if (!verifyPw(b.current_password as string, user.password_hash)) return json(res, { error: "Current password incorrect" }, 401);
+  const newHash = hashPw(b.new_password as string);
+  await query("UPDATE accounts_profile SET password_hash = $1 WHERE id = $2", [newHash, user.id]);
+  json(res, { changed: true });
+});
+
+addRoute("PUT", "/characters/([^/]+)/profile", async (req, res, matches) => {
+  const b = await body(req);
+  if (b.display_name) {
+    const char = await query("SELECT account_id FROM characters WHERE id = $1", [matches[1]]);
+    if (char.rows[0]) await query("UPDATE accounts_profile SET display_name = $1 WHERE id = $2", [b.display_name, char.rows[0].account_id]);
+  }
+  if (b.bio) await query("INSERT INTO player_profiles (user_id, bio) SELECT account_id, $1 FROM characters WHERE id = $2 ON CONFLICT (user_id) DO UPDATE SET bio = $1", [b.bio, matches[1]]);
+  json(res, { updated: true });
+});
+
 addRoute("POST", "/auth/logout", async (req, res) => {
   const b = await body(req);
   if (b.token) await query("UPDATE auth_sessions SET is_active=false WHERE token=$1", [b.token]);
