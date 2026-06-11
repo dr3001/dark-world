@@ -10,13 +10,13 @@ use paths::{
     find_game_executable, get_installation_id, read_local_version, write_local_version, game_dir,
 };
 use serde::Serialize;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, State};
 use updater::{apply_package, cache_download_path, download_file, verify_sha256};
 
 #[derive(Default)]
 struct AppState {
-    bootstrapping: Mutex<bool>,
+    bootstrapping: AtomicBool,
 }
 
 #[derive(Clone, Serialize)]
@@ -146,13 +146,14 @@ async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String>
 
         let cache_path = cache_download_path(&game_file.path);
         let app_emit = app.clone();
-        download_file(&game_file.url, &cache_path, |done, total| {
+        let base_state = state.clone();
+        download_file(&game_file.url, &cache_path, move |done, total| {
             let pct = if total > 0 {
                 ((done as f64 / total as f64) * 100.0) as i32
             } else {
                 0
             };
-            let mut s = state.clone();
+            let mut s = base_state.clone();
             s.progress = pct;
             s.progress_label = format!("{}%", pct);
             s.message = format!("Baixando... {}%", pct);
@@ -209,13 +210,15 @@ async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String>
 
 #[tauri::command]
 async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let mut guard = state.bootstrapping.lock().map_err(|e| e.to_string())?;
-    if *guard {
+    if state
+        .bootstrapping
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
         return Ok(());
     }
-    *guard = true;
-    drop(guard);
     let result = run_bootstrap(app.clone(), false).await;
+    state.bootstrapping.store(false, Ordering::SeqCst);
     if let Err(ref e) = result {
         emit_state(
             &app,

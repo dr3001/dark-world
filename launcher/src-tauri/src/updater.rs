@@ -1,4 +1,5 @@
-use crate::api::{ManifestFile, CDN_BASE};
+use crate::api::ManifestFile;
+use crate::paths::CDN_BASE;
 use crate::paths::game_dir;
 use sha2::{Digest, Sha256};
 use std::fs::File;
@@ -8,7 +9,7 @@ use std::path::{Path, PathBuf};
 pub async fn download_file(
     url_path: &str,
     dest: &Path,
-    on_progress: impl Fn(u64, u64),
+    on_progress: impl Fn(u64, u64) + Send + Sync,
 ) -> Result<(), String> {
     let url = if url_path.starts_with("http") {
         url_path.to_string()
