@@ -17,7 +17,7 @@ GODOT_IMPORT_COMPATIBILITY.md::TextFile/TextFile::-1::1781125164::0::1::::<><><>
 Afterlife.tscn::PackedScene::5486015816436539144::1781136485::0::1::::<><><>0<>0<><>::res://scripts/Afterlife.gd
 Login.tscn::PackedScene::2756292848498450184::1781131930::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
 Main.tscn::PackedScene/PackedScene::-1::1781127607::0::1::::<><><>0<>0<><>::
-World.tscn::PackedScene::1731413958864674568::1781143009::0::1::::<><><>0<>0<><>::res://scripts/World.gd<>res://scripts/CameraController.gd
+World.tscn::PackedScene::1731413958864674568::1781144027::0::1::::<><><>0<>0<><>::res://scripts/World.gd<>res://scripts/CameraController.gd
 ::res://scenes/models/::1781141237
 Dragon.tscn::PackedScene::4309138898425749425::1781141313::0::1::::<><><>0<>0<><>::res://scripts/DragonModel.gd<>res://scripts/DragonAI.gd
 Player.tscn::PackedScene::8773535813890285320::1781141237::0::1::::<><><>0<>0<><>::res://scripts/PlayerModel.gd
@@ -37,7 +37,7 @@ PlayerController.gd::GDScript::5622841169375636981::1781141253::0::1::::<>Charac
 PlayerModel.gd::GDScript::6234382764538736845::1781141237::0::1::::<>Node3D<><>0<>0<><>::
 QuestSystem.gd::GDScript::2970021575417554408::1781141313::0::1::::<>Node<><>0<>0<><>::
 TerrainBuilder.gd::GDScript::4362131768288800160::1781141278::0::1::::<>Node3D<><>0<>0<><>::
-World.gd::GDScript::2723746501345195831::1781143246::0::1::::<>Node3D<><>0<>0<><>::
+World.gd::GDScript::2723746501345195831::1781144085::0::1::::<>Node3D<><>0<>0<><>::
 WorldState.gd::GDScript/GDScript::4745681722969762690::1781125123::0::1::::<>Node<><>0<>0<><>::
 ::res://scripts/test/::1781142899
 DragonTest.gd::GDScript::7086646723013348122::1781142563::0::1::::<>Node3D<><>0<>0<><>::

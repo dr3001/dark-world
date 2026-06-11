@@ -14,11 +14,11 @@ roughness = 0.9
 background_mode = 2
 background_color = Color(0.05, 0.05, 0.08, 1)
 ambient_light_source = 1
-ambient_light_color = Color(0.3, 0.3, 0.4, 1)
+ambient_light_color = Color(0.30, 0.30, 0.40, 1)
 fog_enabled = true
 fog_mode = 1
 fog_density = 0.003
-fog_light_color = Color(0.4, 0.4, 0.5, 1)
+fog_light_color = Color(0.40, 0.40, 0.50, 1)
 tonemap_mode = 0
 
 [node name="World" type="Node3D"]
@@ -56,17 +56,17 @@ anchors_preset = 15
 [node name="HPBar" type="ColorRect" parent="HUD"]
 position = Vector2(20, 620)
 size = Vector2(200, 15)
-color = Color(0.8, 0.1, 0.1, 1)
+color = Color(0.80, 0.10, 0.10, 1)
 
 [node name="HPBarBG" type="ColorRect" parent="HUD"]
 position = Vector2(18, 618)
 size = Vector2(204, 19)
-color = Color(0.1, 0.1, 0.1, 1)
+color = Color(0.10, 0.10, 0.10, 1)
 
 [node name="ManaBar" type="ColorRect" parent="HUD"]
 position = Vector2(20, 640)
 size = Vector2(200, 10)
-color = Color(0.1, 0.3, 0.9, 1)
+color = Color(0.10, 0.30, 0.90, 1)
 
 [node name="PlayerName" type="Label" parent="HUD"]
 text = "Heroi do Vale"
@@ -87,10 +87,3 @@ position = Vector2(800, 680)
 [node name="Position" type="Label" parent="HUD"]
 text = "0, 0, 0"
 position = Vector2(25, 655)
-
-[node name="EventLog" type="RichTextLabel" parent="HUD"]
-position = Vector2(10, 10)
-size = Vector2(400, 200)
-bbcode_enabled = true
-scroll_following = true
-visible = false
