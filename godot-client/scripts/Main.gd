@@ -7,6 +7,7 @@ var current_character_id: String = ""
 
 const WORLD_SCENE = "res://scenes/World.tscn"
 const LANDING_URL = "https://dark.zorionlabs.net"
+const LOCAL_VERSION = "4.3.2"
 
 @onready var status_label: Label = $"StatusLabel"
 @onready var enter_btn: Button = $"EnterButton"
@@ -23,6 +24,36 @@ func _ready():
 	enter_btn.pressed.connect(_on_enter_pressed)
 	create_btn.pressed.connect(_on_create_account_pressed)
 	quit_btn.pressed.connect(_on_quit_pressed)
+	enter_btn.disabled = true
+	create_btn.disabled = true
+	_check_version()
+
+func _check_version():
+	_set_status("Verificando atualizacao...")
+	var http = HTTPRequest.new(); add_child(http)
+	http.request_completed.connect(func(_r, code, _h, resp):
+		if code != 200 or not resp:
+			_set_status("Servidor indisponivel. Tente novamente.")
+			return
+		var data = JSON.parse_string(resp.get_string_from_utf8())
+		if not data: return
+		var remote = data.get("game_version", "0")
+		var force = data.get("force_update", false)
+		if remote != LOCAL_VERSION:
+			_set_status("Atualizacao disponivel: v" + str(remote) + " (local: v" + LOCAL_VERSION + ")")
+			if force:
+				_set_status("ATUALIZACAO OBRIGATORIA! Baixe a versao mais recente.")
+				enter_btn.text = "Atualizacao Necessaria"
+				enter_btn.disabled = true
+				create_btn.text = "Baixar v" + str(remote)
+				create_btn.disabled = false
+				return
+		_set_status("v" + LOCAL_VERSION + " — Pronto.")
+		enter_btn.disabled = false
+		create_btn.disabled = false
+		http.queue_free()
+	, CONNECT_ONE_SHOT)
+	http.request("https://dark.zorionlabs.net/api/launcher/manifest")
 
 func _on_enter_pressed():
 	var email = email_input.text.strip_edges() if email_input else ""

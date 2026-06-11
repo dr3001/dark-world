@@ -1024,7 +1024,7 @@ addRoute("GET", "/api/launcher/status", async (_req, res) => {
 
 addRoute("GET", "/api/launcher/manifest", async (_req, res) => {
   const m = (await query("SELECT * FROM launcher_manifests ORDER BY published_at DESC LIMIT 1")).rows[0];
-  json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: m?.game_version || "0.0.0", launcher_version: m?.launcher_version || "0.0.0" });
+  json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: "4.3.2", launcher_version: "0.5.0", force_update: true, backend_min_version: "2.0.0" });
 });
 
 addRoute("GET", "/api/launcher/news", async (_req, res) => {
