@@ -1129,6 +1129,18 @@ addRoute("GET", "/api/launcher/manifest", async (_req, res) => {
   json(res, { manifest: m ? m.manifest_json : { files: [] }, game_version: "5.0.1", launcher_version: "1.0.0", force_update: true, backend_min_version: "2.0.0" });
 });
 
+addRoute("GET", "/api/launcher/version", async (_req, res) => {
+  json(res, {
+    backend_current_version: "5.0.0-zero-trust",
+    minimum_client_version: "5.0.0",
+    minimum_launcher_version: "1.0.0",
+    maintenance_mode: false,
+    login_allowed: true,
+    message: "Server operational",
+    manifest_url: "https://dark.zorionlabs.net/downloads/launcher/manifest.json"
+  });
+});
+
 addRoute("GET", "/api/launcher/news", async (_req, res) => {
   const ann = (await query("SELECT * FROM server_announcements WHERE expires_at > NOW() ORDER BY priority DESC LIMIT 5")).rows;
   json(res, { news: ann });

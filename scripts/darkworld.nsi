@@ -21,8 +21,13 @@ Section "Dark World" SecMain
     SetOutPath "$INSTDIR"
     File "/opt/darkworld/build/windows/DarkWorld.exe"
     
-    ; Desktop shortcut
-    CreateShortCut "$DESKTOP\Dark World.lnk" "$INSTDIR\DarkWorld.exe"
+    ; version.json
+    FileOpen $0 "$INSTDIR\version.json" w
+    FileWrite $0 '{"game_version":"5.0.1","launcher_version":"1.0.0","platform":"windows","channel":"stable","build_date":"2026-06-12"}$\r$\n'
+    FileClose $0
+    
+    ; Desktop shortcut with icon
+    CreateShortCut "$DESKTOP\Dark World.lnk" "$INSTDIR\DarkWorld.exe" "" "$INSTDIR\DarkWorld.exe" 0
     
     ; Start menu
     CreateDirectory "$SMPROGRAMS\Dark World"

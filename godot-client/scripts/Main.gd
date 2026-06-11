@@ -33,7 +33,7 @@ func _check_version():
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):
 		if code != 200 or not resp:
-			_set_status("Servidor indisponivel. Tente novamente.")
+			_set_status("Nao foi possivel verificar atualizacoes. Conecte-se a internet.")
 			return
 		var data = JSON.parse_string(resp.get_string_from_utf8())
 		if not data: return
