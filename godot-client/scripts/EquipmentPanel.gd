@@ -3,6 +3,7 @@ extends Node
 var panel: ColorRect
 var slot_labels: Dictionary = {}
 var equipped: Dictionary = {}
+var on_unequip_callback: Callable
 var slot_types: Array = ["weapon", "helmet", "chest", "gloves", "boots", "ring", "amulet"]
 var slot_names: Dictionary = {
 	"weapon": "Arma", "helmet": "Capacete", "chest": "Peitoral",
@@ -81,7 +82,9 @@ func _update_display():
 
 func _on_slot_clicked(slot_type: String):
 	if equipped.has(slot_type):
-		print("[Equipment] Unequip: ", slot_type)
+		if on_unequip_callback.is_valid():
+			on_unequip_callback.call(slot_type)
+		unequip_slot(slot_type)
 
 func _rarity_color(rarity: String) -> Color:
 	match rarity:

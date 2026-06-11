@@ -61,6 +61,9 @@ func _ready():
 	if EquipScript:
 		equip_panel_ui = EquipScript.new(); add_child(equip_panel_ui)
 		equip_panel_ui.setup(equipment_panel_node)
+		equip_panel_ui.on_unequip_callback = func(slot_type):
+			if net and character_id != "":
+				net.unequip_item(character_id, slot_type, func(_d): pass)
 	var JournalScript = load("res://scripts/QuestJournal.gd")
 	if JournalScript:
 		journal = JournalScript.new(); add_child(journal)
@@ -604,6 +607,13 @@ func _load_character_data():
 		if data and data.has("quests") and journal:
 			journal.load_from_server(data["quests"])
 			print("[WORLD] Quests loaded — ", data["quests"].size(), " quests")
+	)
+	net.load_save(character_id, func(data):
+		if data and data.has("save") and data["save"] and player:
+			var pos = data["save"].get("position", {})
+			if pos and pos.has("x"):
+				player.global_position = Vector3(float(pos["x"]), float(pos["y"]), float(pos["z"]))
+				print("[WORLD] Position loaded from save: ", player.global_position)
 	)
 
 func _heal_player():

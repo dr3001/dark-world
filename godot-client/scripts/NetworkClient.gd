@@ -106,6 +106,9 @@ func spend_zorium(char_id: String, amount: float, description: String, callback:
 	var b = JSON.stringify({"amount": amount, "description": description})
 	_make_request(SERVER_URL + "/characters/" + char_id + "/spend", callback, "spend", HTTPClient.METHOD_POST, b)
 
+func load_save(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/load", callback, "load_save")
+
 func auth_login(email: String, password: String, callback: Callable):
 	var b = JSON.stringify({"email": email, "password": password})
 	_make_request(SERVER_URL + "/auth/login", callback, "auth_login", HTTPClient.METHOD_POST, b)

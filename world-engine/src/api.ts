@@ -236,6 +236,11 @@ addRoute("GET", "/npcs/([^/]+)/profile", async (_req, res, matches) => {
   json(res, { profile: r.rows[0] });
 });
 
+addRoute("GET", "/characters/([^/]+)/load", async (_req, res, matches) => {
+  const r = await query("SELECT * FROM save_states WHERE character_id = $1 ORDER BY saved_at DESC LIMIT 1", [matches[1]]);
+  json(res, { save: r.rows[0] || null });
+});
+
 addRoute("POST", "/characters/([^/]+)/save", async (req, res, matches) => {
   const b = await body(req);
   const pos = b.position || { x: 0, y: 3, z: 0 };
@@ -336,11 +341,25 @@ addRoute("POST", "/store/webhook/stripe", async (req, res) => {
   json(res, { received: true, mode: "sandbox" });
 });
 
+const chatFlood = new Map<string, number>();
 addRoute("POST", "/chat/send", async (req, res) => {
   const b = await body(req);
   if (!b.message) return json(res, { error: "message required" }, 400);
-  const r = await query("INSERT INTO chat_messages (user_id, character_id, display_name, vip_level, role, message, channel) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *",
-    [b.user_id || null, b.character_id || null, b.display_name || "Anonimo", b.vip_level || 0, b.role || "player", b.message, b.channel || "global"]);
+  const uid = (b.user_id as string) || "anon";
+  const now = Date.now();
+  if (chatFlood.has(uid) && now - chatFlood.get(uid)! < 2000) return json(res, { error: "Rate limit: aguarde 2 segundos" }, 429);
+  chatFlood.set(uid, now);
+  const msg = (b.message as string).toLowerCase();
+  const rules = (await query("SELECT pattern, action FROM chat_moderation_rules WHERE is_active = true")).rows;
+  for (const rule of rules) {
+    if (msg.includes(rule.pattern.toLowerCase())) {
+      if (rule.action === "block") return json(res, { error: "Mensagem bloqueada por regra de moderacao" }, 403);
+      if (rule.action === "flag") { b._flagged = true; }
+    }
+  }
+  const status = b._flagged ? "flagged" : "ok";
+  const r = await query("INSERT INTO chat_messages (user_id, character_id, display_name, vip_level, role, message, channel, moderation_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+    [b.user_id || null, b.character_id || null, b.display_name || "Anonimo", b.vip_level || 0, b.role || "player", b.message, b.channel || "global", status]);
   json(res, { message: r.rows[0] }, 201);
 });
 
@@ -521,6 +540,7 @@ addRoute("POST", "/auth/login", async (req, res) => {
     await query("INSERT INTO security_logs (user_id,action,ip,risk_level,metadata) VALUES ($1,'login_failed',$2,'medium',$3)", [user.id, ip, JSON.stringify({email:b.email})]);
     return json(res, { error: "Invalid credentials" }, 401);
   }
+  if (!user.email_verified) { return json(res, { error: "Email not verified. Check your inbox." }, 403); }
   const token = randomBytes(48).toString("hex");
   await query("INSERT INTO auth_sessions (user_id,token,ip,device) VALUES ($1,$2,$3,$4)", [user.id, token, ip, b.device || "web"]);
   await query("INSERT INTO login_history (user_id,ip,device,success) VALUES ($1,$2,$3,true)", [user.id, ip, b.device || "web"]);
