@@ -232,6 +232,52 @@ addRoute("POST", "/characters/([^/]+)/save", async (req, res, matches) => {
   json(res, { saved: true, timestamp: new Date().toISOString() }, 201);
 });
 
+// ===== HEAL & LOOT =====
+
+addRoute("POST", "/characters/([^/]+)/heal", async (req, res, matches) => {
+  const cid = matches[1];
+  const cost = 5;
+  const w = await query("SELECT * FROM wallets WHERE character_id = $1", [cid]);
+  if (!w.rows[0] || parseFloat(w.rows[0].balance) < cost) return json(res, { error: "Insufficient zorium", cost }, 400);
+  await query("UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE character_id = $2", [cost, cid]);
+  await query("INSERT INTO transactions (from_wallet_id, amount, tx_type, description) VALUES ($1,$2,'purchase','heal')", [w.rows[0].id, cost]);
+  await query("UPDATE character_stats SET hp = max_hp, updated_at = NOW() WHERE character_id = $1", [cid]);
+  const stats = await query("SELECT hp, max_hp, zorium FROM character_stats WHERE character_id = $1", [cid]);
+  json(res, { healed: true, cost, stats: stats.rows[0] });
+});
+
+addRoute("GET", "/loot/([^/]+)/([^/]+)", async (_req, res, matches) => {
+  const r = await query(
+    "SELECT lt.*, i.name as item_name, i.rarity, i.base_stats FROM loot_tables lt JOIN items i ON lt.item_id = i.id WHERE lt.source_type = $1 AND lt.source_id = $2",
+    [matches[1], matches[2]]
+  );
+  json(res, { loot_table: r.rows });
+});
+
+addRoute("POST", "/loot/([^/]+)/([^/]+)/roll", async (_req, res, matches) => {
+  const table = await query(
+    "SELECT lt.*, i.name as item_name FROM loot_tables lt JOIN items i ON lt.item_id = i.id WHERE lt.source_type = $1 AND lt.source_id = $2",
+    [matches[1], matches[2]]
+  );
+  const drops: Array<{ item_id: string; item_name: string; quantity: number }> = [];
+  for (const entry of table.rows) {
+    if (Math.random() <= parseFloat(entry.drop_chance)) {
+      const qty = entry.min_qty + Math.floor(Math.random() * (entry.max_qty - entry.min_qty + 1));
+      drops.push({ item_id: entry.item_id, item_name: entry.item_name, quantity: qty });
+    }
+  }
+  json(res, { drops });
+});
+
+addRoute("POST", "/npcs/([^/]+)/memory", async (req, res, matches) => {
+  const b = await body(req);
+  await query(
+    "INSERT INTO npc_memory (npc_entity_id, character_id, memory_type, content, importance) VALUES ($1,$2,$3,$4,$5)",
+    [matches[1], b.character_id || null, b.memory_type || "interaction", JSON.stringify(b.content || {}), b.importance || 5]
+  );
+  json(res, { recorded: true }, 201);
+});
+
 // ===== ROUTER =====
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type,Authorization" }); res.end(); return; }

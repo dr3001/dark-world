@@ -76,3 +76,28 @@ func accept_quest(char_id: String, quest_id: String, callback: Callable):
 func save_game(char_id: String, pos: Vector3, callback: Callable):
 	var b = JSON.stringify({"position": {"x": pos.x, "y": pos.y, "z": pos.z}})
 	_make_request(SERVER_URL + "/characters/" + char_id + "/save", callback, "save_game", HTTPClient.METHOD_POST, b)
+
+func heal_character(char_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/characters/" + char_id + "/heal", callback, "heal", HTTPClient.METHOD_POST, "{}")
+
+func get_loot_table(source_type: String, source_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/loot/" + source_type + "/" + source_id, callback, "get_loot")
+
+func roll_loot(source_type: String, source_id: String, callback: Callable):
+	_make_request(SERVER_URL + "/loot/" + source_type + "/" + source_id + "/roll", callback, "roll_loot", HTTPClient.METHOD_POST, "{}")
+
+func equip_item(char_id: String, item_id: String, slot_type: String, callback: Callable):
+	var b = JSON.stringify({"item_id": item_id, "slot_type": slot_type})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/equipment/equip", callback, "equip", HTTPClient.METHOD_POST, b)
+
+func unequip_item(char_id: String, slot_type: String, callback: Callable):
+	var b = JSON.stringify({"slot_type": slot_type})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/equipment/unequip", callback, "unequip", HTTPClient.METHOD_POST, b)
+
+func add_to_inventory(char_id: String, item_id: String, qty: int, callback: Callable):
+	var b = JSON.stringify({"item_id": item_id, "quantity": qty})
+	_make_request(SERVER_URL + "/characters/" + char_id + "/inventory", callback, "add_inv", HTTPClient.METHOD_POST, b)
+
+func record_npc_memory(npc_entity_id: String, char_id: String, memory_type: String, content: Dictionary, callback: Callable):
+	var b = JSON.stringify({"character_id": char_id, "memory_type": memory_type, "content": content})
+	_make_request(SERVER_URL + "/npcs/" + npc_entity_id + "/memory", callback, "npc_memory", HTTPClient.METHOD_POST, b)

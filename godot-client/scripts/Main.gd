@@ -40,6 +40,9 @@ func _on_character_created(data: Dictionary):
 	if data.has("character"):
 		current_entity_id = data["character"]["entity_id"]
 		current_life_state = data["character"]["life_state"]
+		get_tree().root.set_meta("character_id", data["character"]["id"])
+		get_tree().root.set_meta("account_id", current_account_id)
+		get_tree().root.set_meta("entity_id", current_entity_id)
 		_set_status("Entrando no Vale Cinzento...")
 		await get_tree().create_timer(1.0).timeout
 		_enter_world()

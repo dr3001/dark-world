@@ -161,3 +161,37 @@ columns = 5
 text = "20 slots disponiveis"
 position = Vector2(20, 370)
 modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="EquipmentPanel" type="ColorRect" parent="HUD"]
+visible = false
+position = Vector2(40, 160)
+size = Vector2(260, 340)
+color = Color(0.06, 0.06, 0.10, 0.94)
+
+[node name="EquipTitle" type="Label" parent="HUD/EquipmentPanel"]
+text = "Equipamento"
+position = Vector2(10, 10)
+modulate = Color(1, 0.85, 0.4, 1)
+
+[node name="JournalPanel" type="ColorRect" parent="HUD"]
+visible = false
+position = Vector2(440, 100)
+size = Vector2(400, 400)
+color = Color(0.06, 0.06, 0.10, 0.94)
+
+[node name="JournalTitle" type="Label" parent="HUD/JournalPanel"]
+text = "Jornal de Missoes [J]"
+position = Vector2(20, 10)
+modulate = Color(1, 0.85, 0.4, 1)
+
+[node name="TooltipPanel" type="ColorRect" parent="HUD"]
+visible = false
+position = Vector2(580, 200)
+size = Vector2(240, 160)
+color = Color(0.08, 0.08, 0.12, 0.95)
+
+[node name="SaveIndicator" type="Label" parent="HUD"]
+visible = false
+text = "Salvando..."
+position = Vector2(1100, 690)
+modulate = Color(0.5, 0.8, 0.5, 1)

@@ -9,6 +9,11 @@ var dialog_panel: ColorRect; var dialog_name_label: Label; var dialog_text_label
 var interact_hint: Label; var dialog_open: bool = false; var nearest_npc: Node3D = null
 var quest_stage: int = 0
 var inventory_panel: ColorRect; var level_label: Label; var zorium_label: Label
+var char_profile = null; var equip_panel_ui = null; var journal = null
+var tooltip_node = null; var inv_system = null; var combat_sys = null
+var loot_sys = null; var save_indicator: Label = null
+var equipment_panel_node: ColorRect; var journal_panel_node: ColorRect
+var character_id: String = ""; var auto_save_timer: float = 0.0
 var npc_dialogs: Dictionary = {
 	"Guardiao_do_Vale": "Mantenha-se atento aos perigos da regiao.",
 	"Ferreiro_Thorin": "Posso forjar armas para aventureiros.",
@@ -30,6 +35,38 @@ func _ready():
 	level_label = get_node_or_null("HUD/LevelLabel")
 	zorium_label = get_node_or_null("HUD/ZoriumLabel")
 	if inventory_panel: inventory_panel.visible = false
+	equipment_panel_node = get_node_or_null("HUD/EquipmentPanel")
+	journal_panel_node = get_node_or_null("HUD/JournalPanel")
+	save_indicator = get_node_or_null("HUD/SaveIndicator")
+	var tp = get_node_or_null("HUD/TooltipPanel")
+	if tp: tp.queue_free()
+	var TipScript = load("res://scripts/ItemTooltip.gd")
+	if TipScript:
+		tooltip_node = TipScript.new(); tooltip_node.name = "TooltipPanel"
+		get_node("HUD").add_child(tooltip_node)
+	character_id = get_tree().root.get_meta("character_id", "")
+	var CharProfileScript = load("res://scripts/CharacterProfile.gd")
+	if CharProfileScript:
+		char_profile = CharProfileScript.new(); add_child(char_profile)
+		char_profile.set_character_id(character_id)
+	var InvScript = load("res://scripts/InventorySystem.gd")
+	if InvScript:
+		inv_system = InvScript.new(); add_child(inv_system)
+		inv_system.setup(inventory_panel, tooltip_node)
+	var EquipScript = load("res://scripts/EquipmentPanel.gd")
+	if EquipScript:
+		equip_panel_ui = EquipScript.new(); add_child(equip_panel_ui)
+		equip_panel_ui.setup(equipment_panel_node)
+	var JournalScript = load("res://scripts/QuestJournal.gd")
+	if JournalScript:
+		journal = JournalScript.new(); add_child(journal)
+		journal.setup(journal_panel_node)
+	var CombatScript = load("res://scripts/CombatSystem.gd")
+	if CombatScript:
+		combat_sys = CombatScript.new(); add_child(combat_sys)
+	var LootScript = load("res://scripts/LootTable.gd")
+	if LootScript:
+		loot_sys = LootScript.new(); add_child(loot_sys)
 	cam = $Camera3D
 	
 	_build_plaza()
@@ -432,8 +469,13 @@ func _process(delta):
 		if hp_bar and mhp > 0: hp_bar.size.x = 220 * (hp / mhp)
 	if player and pos_label:
 		pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))
-	if level_label: level_label.text = "Nv. 1"
-	if zorium_label: zorium_label.text = "0 Z"
+	if char_profile:
+		if level_label: level_label.text = char_profile.get_level_text()
+		if zorium_label: zorium_label.text = char_profile.get_zorium_text()
+	auto_save_timer += delta
+	if auto_save_timer >= 60.0:
+		auto_save_timer = 0.0
+		_auto_save()
 	if player and not dialog_open:
 		nearest_npc = null
 		var min_dist = 4.0
@@ -447,32 +489,92 @@ func _process(delta):
 
 func _unhandled_input(event):
 	if not (event is InputEventKey and event.pressed and not event.echo): return
+	if dialog_open and event.keycode != KEY_E:
+		_handle_dialog_key(event.keycode)
+		return
 	if event.keycode == KEY_E:
 		if dialog_open:
 			_close_dialog()
 		elif nearest_npc:
 			_open_dialog(nearest_npc)
 	elif event.keycode == KEY_I:
-		if inventory_panel:
-			inventory_panel.visible = !inventory_panel.visible
+		if inv_system: inv_system.toggle()
+		if equip_panel_ui: equip_panel_ui.toggle()
+	elif event.keycode == KEY_J:
+		if journal: journal.toggle()
+	elif event.keycode == KEY_F5:
+		_manual_save()
+
+var dialog_npc_id: String = ""
 
 func _open_dialog(npc: Node3D):
 	dialog_open = true
+	dialog_npc_id = npc.name
 	if dialog_panel: dialog_panel.visible = true
 	var npc_display = npc.name.replace("_", " ")
 	if dialog_name_label: dialog_name_label.text = npc_display
-	if dialog_text_label: dialog_text_label.text = npc_dialogs.get(npc.name, "...")
+	var base_text = npc_dialogs.get(npc.name, "...")
+	if npc.name == "Curandeira_Lyra":
+		base_text += "\n\n[C] Curar (5 Zorium)"
+		if quest_stage == 0:
+			base_text += "   [Q] Aceitar missao"
+	elif npc.name == "Ferreiro_Thorin":
+		base_text += "\n\n[F] Forjar Espada de Ferro (30 Z)"
+	if dialog_text_label: dialog_text_label.text = base_text
 	if interact_hint: interact_hint.text = ""
 	_advance_quest(npc.name)
 
 func _close_dialog():
 	dialog_open = false
+	dialog_npc_id = ""
 	if dialog_panel: dialog_panel.visible = false
 
 func _advance_quest(npc_id: String):
 	if npc_id == "Curandeira_Lyra" and quest_stage == 0:
-		quest_stage = 1
-		if quest_text: quest_text.text = "MISSAO INICIADA\nDerrote Vorak, o Antigo"
-		await get_tree().create_timer(3.0).timeout
-		if quest_text and quest_stage == 1:
-			quest_text.text = "MISSAO: Derrote Vorak, o Antigo"
+		pass
+
+func _handle_dialog_key(keycode: int):
+	if dialog_npc_id == "Curandeira_Lyra":
+		if keycode == KEY_C:
+			_heal_player()
+		elif keycode == KEY_Q and quest_stage == 0:
+			quest_stage = 1
+			if quest_text: quest_text.text = "MISSAO: Derrote Vorak, o Antigo"
+			if dialog_text_label: dialog_text_label.text = "Missao aceita! Derrote Vorak."
+	elif dialog_npc_id == "Ferreiro_Thorin":
+		if keycode == KEY_F:
+			_forge_item()
+
+func _heal_player():
+	if not char_profile: return
+	if not char_profile.spend_zorium(5.0):
+		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente."
+		return
+	char_profile.heal_full()
+	if dialog_text_label: dialog_text_label.text = "Curada! HP restaurado."
+
+func _forge_item():
+	if not char_profile: return
+	if not char_profile.spend_zorium(30.0):
+		if dialog_text_label: dialog_text_label.text = "Zorium insuficiente."
+		return
+	if dialog_text_label: dialog_text_label.text = "Espada de Ferro forjada!"
+	if inv_system:
+		inv_system.add_item(inv_system.get_used_count(), {
+			"item_name": "Espada de Ferro", "item_type": "weapon",
+			"rarity": "uncommon", "slot_type": "weapon",
+			"base_stats": {"attack": 8, "speed": 0.9, "critical": 0.03},
+			"quantity": 1
+		})
+
+func _manual_save():
+	if save_indicator: save_indicator.text = "Salvando..."
+	if save_indicator: save_indicator.visible = true
+	await get_tree().create_timer(2.0).timeout
+	if save_indicator: save_indicator.visible = false
+
+func _auto_save():
+	if save_indicator: save_indicator.text = "Auto-save..."
+	if save_indicator: save_indicator.visible = true
+	await get_tree().create_timer(1.5).timeout
+	if save_indicator: save_indicator.visible = false
