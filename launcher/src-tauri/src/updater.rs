@@ -16,7 +16,11 @@ pub async fn download_file(
     } else {
         format!("{}{}", CDN_BASE, url_path)
     };
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(20))
+        .timeout(std::time::Duration::from_secs(900))
+        .build()
+        .map_err(|e| e.to_string())?;
     let resp = client
         .get(&url)
         .send()

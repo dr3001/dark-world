@@ -84,10 +84,17 @@ els.settingsBtn.addEventListener("click", async () => {
 els.closeSettingsBtn.addEventListener("click", () => els.settingsDialog.close());
 
 (async () => {
-  const cl = await invoke("fetch_changelog");
-  els.changelog.textContent = cl || "Sem novidades publicadas.";
+  // Bootstrap FIRST — changelog must not block server check / play button
+  const bootstrapPromise = invoke("bootstrap");
+  invoke("fetch_changelog")
+    .then((cl) => {
+      els.changelog.textContent = cl || "Sem novidades publicadas.";
+    })
+    .catch(() => {
+      els.changelog.textContent = "Sem novidades publicadas.";
+    });
   try {
-    await invoke("bootstrap");
+    await bootstrapPromise;
   } catch {
     /* bootstrap emits friendly state via launcher-state */
   }

@@ -43,6 +43,10 @@ fn rotate_if_needed(path: &PathBuf) {
     }
 }
 
+pub fn log_step(step: &str, detail: &str) {
+    log(&format!("[{step}] {detail}"));
+}
+
 pub fn init() {
     let _ = fs::create_dir_all(logs_dir());
     log("Launcher logging initialized");

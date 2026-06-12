@@ -16,8 +16,33 @@ use paths::{
 use serde::Serialize;
 use std::process::Child;
 use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::time::timeout;
 use updater::{apply_package, cache_download_path, download_file, verify_sha256};
+
+const API_TIMEOUT: Duration = Duration::from_secs(25);
+
+async fn timed_api<F, T>(step: &str, fut: F) -> Result<T, String>
+where
+    F: std::future::Future<Output = Result<T, String>>,
+{
+    match timeout(API_TIMEOUT, fut).await {
+        Ok(r) => r,
+        Err(_) => {
+            logger::log_step(step, "TIMEOUT");
+            Err(format!("{step} timeout after {}s", API_TIMEOUT.as_secs()))
+        }
+    }
+}
+
+fn api_client() -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(12))
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())
+}
 
 #[derive(Default)]
 pub(crate) struct AppState {
@@ -51,29 +76,13 @@ pub(crate) fn emit_state(app: &AppHandle, state: LauncherState) {
 }
 
 pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let inst_id = get_installation_id();
-    let plat = platform_key();
-    send_telemetry(
-        &client,
-        "launcher_start",
-        plat,
-        &read_local_version(),
-        &inst_id,
-        serde_json::json!({}),
-    )
-    .await;
-
+    logger::log_step("STARTUP", "bootstrap begin");
     let mut state = LauncherState {
         server_online: false,
         players_online: 0,
         local_version: read_local_version(),
         remote_version: "—".to_string(),
-        message: "Verificando servidor...".to_string(),
+        message: "Iniciando...".to_string(),
         can_play: false,
         progress: -1,
         progress_label: String::new(),
@@ -82,40 +91,81 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
     };
     emit_state(&app, state.clone());
 
-    let status = fetch_status(&client).await;
-    let server_online = status.as_ref().map(|s| s.server == "online").unwrap_or(false);
-    state.server_online = server_online;
-    state.players_online = status.as_ref().map(|s| s.players_online).unwrap_or(0);
-    if !server_online {
-        state.message = "Servidor offline ou indisponível.".to_string();
-        emit_state(&app, state);
+    logger::log_step("LOAD_CONFIG", "paths and installation id");
+    state.message = "Carregando configurações...".to_string();
+    emit_state(&app, state.clone());
+
+    let client = api_client()?;
+    let inst_id = get_installation_id();
+    let plat = platform_key();
+
+    // Never block UI on telemetry
+    let telem_client = match api_client() {
+        Ok(c) => c,
+        Err(_) => client.clone(),
+    };
+    let telem_id = inst_id.clone();
+    let telem_ver = read_local_version();
+    tauri::async_runtime::spawn(async move {
         send_telemetry(
-            &client,
-            "server_offline",
+            &telem_client,
+            "launcher_start",
             plat,
-            &read_local_version(),
-            &inst_id,
+            &telem_ver,
+            &telem_id,
             serde_json::json!({}),
         )
         .await;
+    });
+
+    logger::log_step("CHECK_SERVER", "fetch /api/launcher/status");
+    state.message = "Consultando servidor...".to_string();
+    emit_state(&app, state.clone());
+
+    let status = match timed_api("CHECK_SERVER", fetch_status(&client)).await {
+        Ok(s) => Some(s),
+        Err(e) => {
+            logger::log_step("CHECK_SERVER", &format!("failed: {e}"));
+            None
+        }
+    };
+    let server_online = status.as_ref().map(|s| s.server == "online").unwrap_or(false);
+    state.server_online = server_online;
+    state.players_online = status.as_ref().map(|s| s.players_online).unwrap_or(0);
+    emit_state(&app, state.clone());
+
+    if !server_online {
+        state.message = "Não foi possível conectar ao servidor. Tente Reparar.".to_string();
+        emit_state(&app, state);
+        logger::log_step("CHECK_SERVER", "server offline or unreachable");
         return Err("server offline".to_string());
     }
 
-    state.message = "Verificando atualizações...".to_string();
+    logger::log_step("CHECK_VERSION", "fetch version policy");
+    state.message = "Conectando API...".to_string();
     emit_state(&app, state.clone());
 
-    let version_policy = fetch_version_policy(&client).await.ok();
+    let version_policy = timed_api("CHECK_VERSION", fetch_version_policy(&client))
+        .await
+        .ok();
     if let Some(ref vp) = version_policy {
         if vp.maintenance_mode {
             state.message = vp.message.clone();
             emit_state(&app, state);
+            logger::log_step("CHECK_VERSION", "maintenance mode");
             return Err("maintenance mode".to_string());
         }
     }
 
-    let manifest = fetch_manifest(&client).await?;
+    logger::log_step("LOAD_MANIFEST", "fetch manifest.json");
+    state.message = "Baixando manifest...".to_string();
+    emit_state(&app, state.clone());
+
+    let manifest = timed_api("LOAD_MANIFEST", fetch_manifest(&client)).await?;
+    logger::log_step("PARSE_MANIFEST", &format!("game={}", manifest.game_version));
     state.remote_version = manifest.game_version.clone();
     state.force_update = manifest.force_update;
+    state.message = "Comparando versões...".to_string();
     emit_state(&app, state.clone());
 
     let local = read_local_version();
@@ -141,6 +191,7 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
         || (manifest.force_update && local != manifest.game_version);
 
     if needs_update {
+        logger::log_step("CHECK_UPDATE", "download required");
         let game_file = pick_game_file(&manifest).ok_or("Nenhum pacote de jogo para esta plataforma")?;
         state.message = format!("Baixando v{}...", manifest.game_version);
         state.progress = 0;
@@ -157,6 +208,7 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
         )
         .await;
 
+        logger::log_step("DOWNLOAD_MANIFEST", &game_file.url);
         let cache_path = cache_download_path(&game_file.path);
         let app_emit = app.clone();
         let base_state = state.clone();
@@ -225,7 +277,10 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
     state.can_play = play_ok;
     if play_ok {
         state.message = format!("v{} — Pronto para jogar.", updated_local);
+    } else if find_game_executable().is_none() {
+        state.message = "Jogo não instalado. Clique Reparar.".to_string();
     }
+    logger::log_step("ENABLE_PLAY", &format!("can_play={play_ok} local={updated_local}"));
     logger::log(&format!(
         "Bootstrap complete: can_play={play_ok} local={updated_local} remote={}",
         manifest.game_version
@@ -241,6 +296,7 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
     {
+        logger::log_step("STARTUP", "bootstrap already running — skip duplicate invoke");
         return Ok(());
     }
     let result = run_bootstrap(app.clone(), false).await;
@@ -248,19 +304,32 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
     if let Err(ref e) = result {
         logger::log(&format!("Bootstrap error: {e}"));
         let friendly = match e.as_str() {
-            "server offline" => "Não foi possível conectar ao servidor. Tente novamente em instantes.".to_string(),
+            "server offline" => {
+                "Não foi possível conectar ao servidor. Clique Reparar para tentar novamente."
+                    .to_string()
+            }
             "maintenance mode" => "Servidor em manutenção. Aguarde e tente novamente.".to_string(),
+            _ if e.contains("timeout") => format!(
+                "Tempo esgotado ({e}). Verifique sua internet e clique Reparar."
+            ),
             _ if e.contains("Hash") || e.contains("SHA") => {
                 "Arquivo corrompido. Use Reparar para baixar novamente.".to_string()
             }
-            _ => "Não foi possível concluir a verificação. Use Reparar.".to_string(),
+            _ => format!("Falha na verificação: {e}. Use Reparar."),
         };
+        let last = app
+            .try_state::<AppState>()
+            .and_then(|s| s.last_state.lock().ok().map(|g| g.clone()))
+            .unwrap_or_default();
         emit_state(
             &app,
             LauncherState {
                 message: friendly,
-                can_play: find_game_executable().is_some(),
+                server_online: last.server_online,
+                players_online: last.players_online,
                 local_version: read_local_version(),
+                remote_version: last.remote_version,
+                can_play: false,
                 ..Default::default()
             },
         );
