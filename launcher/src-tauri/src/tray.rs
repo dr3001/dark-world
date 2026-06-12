@@ -53,6 +53,7 @@ fn refresh_tooltip(app: &AppHandle) {
 }
 
 pub fn show_launcher_window(app: &AppHandle) {
+    let _ = app.show();
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_skip_taskbar(false);
         let _ = win.unminimize();
@@ -68,6 +69,7 @@ pub fn hide_launcher_on_play(app: &AppHandle) {
     let _ = win.set_skip_taskbar(true);
     let _ = win.minimize();
     let _ = win.hide();
+    let _ = app.hide();
     logger::log("Launcher hidden to tray for gameplay");
 }
 

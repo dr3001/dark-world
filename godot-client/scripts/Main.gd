@@ -26,9 +26,30 @@ func _ready():
 	if forgot_btn:
 		forgot_btn.pressed.connect(_on_forgot_password_pressed)
 	quit_btn.pressed.connect(_on_quit_pressed)
+	if email_input:
+		email_input.text_submitted.connect(_on_login_field_submitted)
+	if password_input:
+		password_input.text_submitted.connect(_on_login_field_submitted)
 	_set_status("Digite email e senha para entrar no Vale Cinzento.")
 	enter_btn.disabled = false
 	create_btn.disabled = false
+
+func _unhandled_input(event):
+	if not event is InputEventKey or not event.pressed:
+		return
+	if event.keycode != KEY_ENTER and event.keycode != KEY_KP_ENTER:
+		return
+	_try_login_from_fields()
+
+func _on_login_field_submitted(_text: String):
+	_try_login_from_fields()
+
+func _try_login_from_fields():
+	var email = email_input.text.strip_edges() if email_input else ""
+	var password = password_input.text if password_input else ""
+	if email == "" or password == "":
+		return
+	_on_enter_pressed()
 
 func _on_enter_pressed():
 	var email = email_input.text.strip_edges() if email_input else ""

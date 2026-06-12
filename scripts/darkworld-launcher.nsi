@@ -4,6 +4,19 @@ Name "Dark World Launcher"
 OutFile "/opt/darkworld/build/DarkWorld-Launcher-Setup.exe"
 InstallDir "$PROGRAMFILES64\Dark World"
 RequestExecutionLevel admin
+Unicode true
+
+!define PRODUCT_NAME "Dark World Launcher"
+!define PRODUCT_PUBLISHER "Zorion Labs"
+!define PRODUCT_VERSION "1.0.5"
+!define PRODUCT_DESCRIPTION "Official Dark World game launcher and updater"
+
+VIProductVersion "${PRODUCT_VERSION}.0"
+VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
+VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
+VIAddVersionKey "FileDescription" "${PRODUCT_DESCRIPTION}"
+VIAddVersionKey "LegalCopyright" "Copyright (c) 2026 Zorion Labs"
+VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 
@@ -38,7 +51,9 @@ Section "Dark World Launcher" SecMain
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "DisplayName" "Dark World Launcher"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "Publisher" "Zorion Labs"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "DisplayVersion" "1.0.0"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "DisplayVersion" "${PRODUCT_VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "URLInfoAbout" "https://dark.zorionlabs.net"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher" "HelpLink" "https://dark.zorionlabs.net"
 SectionEnd
 
 Section "Uninstall"

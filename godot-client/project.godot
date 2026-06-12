@@ -3,12 +3,13 @@
 
 config/name="Dark World"
 config/description="Dark Fantasy Medieval Brutal MMO"
-config/version="5.0.6"
+config/version="5.0.8"
 run/main_scene="res://scenes/Login.tscn"
 
 [autoload]
 
 GameLogger="*res://scripts/GameLogger.gd"
+PlayerDebug="*res://scripts/PlayerDebug.gd"
 
 [rendering]
 renderer/rendering_method="forward_plus"

@@ -182,6 +182,18 @@ func _ready():
 			cfg_http.queue_free()
 		, CONNECT_ONE_SHOT)
 		cfg_http.request(SERVER_URL + "/combat-vfx/config?user_id=" + character_id)
+	call_deferred("_finalize_spawn")
+
+func _finalize_spawn():
+	await get_tree().process_frame
+	if cam and cam.has_method("snap_validate"):
+		cam.snap_validate()
+	if player and cam and "--validation" in OS.get_cmdline_args():
+		var vr_script = load("res://scripts/ValidationRunner.gd")
+		if vr_script:
+			var vr = vr_script.new()
+			add_child(vr)
+			vr.setup(player, cam)
 
 # ===== PLAZA =====
 func _build_plaza():
