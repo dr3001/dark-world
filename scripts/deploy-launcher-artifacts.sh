@@ -13,6 +13,10 @@ bash "$ROOT/scripts/sync-version.sh"
 mkdir -p "$BUILD/launcher" "$DOWNLOADS"
 
 if [ -f "$LAUNCHER_SRC" ]; then
+  if strings "$LAUNCHER_SRC" 2>/dev/null | grep -qi 'node_modules'; then
+    echo "ERROR: Refusing to publish — launcher exe contains Node.js strings (wrong binary)"
+    exit 1
+  fi
   cp "$LAUNCHER_SRC" "$DOWNLOADS/DarkWorld-Launcher.exe"
   echo "Published Tauri GUI: DarkWorld-Launcher.exe ($(stat -c%s "$DOWNLOADS/DarkWorld-Launcher.exe") bytes)"
 else
@@ -25,7 +29,15 @@ if [ -f "$LAUNCHER_MAC" ]; then
 fi
 
 if [ -f "$DOWNLOADS/DarkWorld-Launcher.exe" ] && command -v makensis >/dev/null 2>&1; then
-  makensis "$ROOT/scripts/darkworld.nsi" 2>&1 | tail -5 || true
+  mkdir -p "$ROOT/scripts/templates"
+  python3 -c "
+import json, os
+v = json.load(open('$ROOT/version.json'))
+os.makedirs('$ROOT/scripts/templates', exist_ok=True)
+with open('$ROOT/scripts/templates/installer-version.json', 'w') as f:
+    json.dump({'game_version': v['game_version'], 'launcher_version': v['launcher_version']}, f)
+"
+  makensis "$ROOT/scripts/darkworld-launcher.nsi" 2>&1 | tail -5 || true
   if [ -f "$BUILD/DarkWorld-Launcher-Setup.exe" ]; then
     cp "$BUILD/DarkWorld-Launcher-Setup.exe" "$DOWNLOADS/"
     echo "Published NSIS installer: DarkWorld-Launcher-Setup.exe"

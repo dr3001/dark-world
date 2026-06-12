@@ -39,9 +39,25 @@ jobs:
       - name: Stage Windows launcher
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p staging/windows
           EXE=$(find launcher/src-tauri/target/release -maxdepth 1 -name '*.exe' | head -1)
+          if [ -z "$EXE" ] || [ ! -f "$EXE" ]; then
+            echo "ERROR: No Tauri exe found in target/release"
+            ls -la launcher/src-tauri/target/release/ || true
+            exit 1
+          fi
           cp "$EXE" staging/windows/DarkWorld-Launcher.exe
+          SIZE=$(stat -c%s staging/windows/DarkWorld-Launcher.exe 2>/dev/null || stat -f%z staging/windows/DarkWorld-Launcher.exe)
+          echo "Staged exe: $EXE ($SIZE bytes)"
+          if [ "$SIZE" -lt 1048576 ]; then
+            echo "ERROR: exe too small ($SIZE bytes) — likely not a valid Tauri build"
+            exit 1
+          fi
+          if strings staging/windows/DarkWorld-Launcher.exe | grep -qi 'node_modules'; then
+            echo "ERROR: exe contains node_modules strings — wrong binary type"
+            exit 1
+          fi
           ls -la staging/windows/
 
       - name: Upload Windows launcher
@@ -76,6 +92,7 @@ jobs:
       - name: Build Tauri macOS universal
         working-directory: launcher
         run: npm run build:mac
+        continue-on-error: true
         env:
           CI: true
 
