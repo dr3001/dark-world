@@ -1,58 +1,70 @@
-# Rogério Re-Test Protocol — Pós-publicação Tauri GUI
+# Rogério — CAUSA RAIZ ENCONTRADA + Re-teste Obrigatório
 
-**Data publicação CDN:** 2026-06-12T00:12:16Z  
-**CI run:** 27385188556 (commit f853e00)  
-**Classificação crash anterior:** CRASH_REPRODUCED — Node CLI no CDN (não Tauri)
+**Data:** 2026-06-12  
+**Classificação:** ROOT_CAUSE_FOUND → FIXED_WAITING_HUMAN_TEST
 
-## Causa do crash anterior
+## Por que você viu o mesmo comportamento
 
-Rogério baixou da home → `DarkWorld-Launcher-Setup.exe` instalou **Node CLI** (62MB, hash `82791f8c...`).  
-App de console com `process.exit(1)` em erro → janela abre e fecha = crash imediato percebido.
+Você baixou da home, mas **Cloudflare entregou o instalador ANTIGO em cache**:
 
-## Binário novo no CDN (evidência servidor)
+| | Instalador correto (servidor) | O que você recebeu (cache CF) |
+|--|-------------------------------|-------------------------------|
+| Tamanho | **~4,2 MB** | **~23 MB** |
+| Hash | `3252c01e...` | `061a1102...` |
+| Produto | Tauri GUI | Node CLI (console) |
+| Comportamento | Janela gráfica | Abre e fecha = "crash" |
 
-| Campo | Antigo (Node CLI) | Novo (Tauri GUI) |
-|-------|-------------------|------------------|
-| Arquivo | DarkWorld-Launcher.exe | DarkWorld-Launcher.exe |
-| Tamanho | 62.664.008 bytes | **12.661.248 bytes** |
-| SHA256 | `82791f8c653afbfb...` | **`2e26d7c1010e85965d92750b1524a942b7993879d88c70c97d36c43049f614fe`** |
-| Installer SHA256 | `061a110250d2f227...` | **`3252c01e65cfa47309aa24c424252e75460cad088e72196226d56be2b43d02dd`** |
-| Strings node | presentes | **ausentes** |
-| URL | https://dark.zorionlabs.net/downloads/DarkWorld-Launcher-Setup.exe | mesma URL, **conteúdo novo** |
+O manifest no servidor já estava certo. O link da home **não tinha cache-bust**, então o navegador/CDN serviu arquivo de **11 Jun 23:21**.
 
-## Passos obrigatórios (Windows)
+## O que fazer AGORA
 
-1. **Desinstalar** "Dark World Launcher" em Adicionar/Remover Programas
-2. Apagar `%LOCALAPPDATA%\DarkWorld\` se existir (opcional, limpa cache)
-3. Baixar **novo** installer da home: https://dark.zorionlabs.net
-4. **Verificar hash** antes de instalar:
-   ```powershell
-   Get-FileHash "$env:USERPROFILE\Downloads\DarkWorld-Launcher-Setup.exe" -Algorithm SHA256
-   ```
-   Deve começar com `3252c01e65cfa473...` (não `061a1102...`)
-5. Instalar → abrir atalho Desktop
-6. **Esperado:** janela GUI 560×640, título "Dark World Launcher", botões Jogar/Reparar/⚙
-7. **Screenshot obrigatório** → salvar em `evidence/rogério-windows-YYYYMMDD.png`
+### 1. Limpar instalação antiga (manual)
 
-## Se ainda crashar (Tauri confirmado)
-
-Executar no CMD:
-```cmd
-"C:\Program Files\Dark World\DarkWorld-Launcher.exe"
 ```
-Capturar saída. Verificar Event Viewer → Windows Logs → Application.
+Configurações → Aplicativos → Desinstalar TODAS entradas "Dark World"
+Apagar pasta: C:\Program Files\Dark World
+Apagar pasta: %LOCALAPPDATA%\DarkWorld
+Apagar atalho Desktop: Dark World.lnk
+```
 
-Verificar WebView2 Runtime instalado (Settings → Apps → "Microsoft Edge WebView2").
+### 2. Baixar pelo link NOVO (com ?v=)
 
-## macOS (best-effort)
+Abra: https://dark.zorionlabs.net
 
-Novo tarball hash: `a97bdeb44663e996...` (7.5MB, CI run f853e00)  
-URL: https://dark.zorionlabs.net/downloads/DarkWorld-Launcher-mac.tar.gz
+Clique **Baixar Launcher (Windows)** — a URL deve conter:
+```
+/downloads/DarkWorld-Launcher-Setup.exe?v=3252c01e
+```
 
-## Screenshot
+### 3. ANTES de instalar — verificar tamanho
 
-**PENDENTE** — aguardando Rogério.
+| Tamanho do arquivo | Significado |
+|--------------------|-------------|
+| **~4,2 MB** | Correto (Tauri GUI) |
+| **~23 MB** | ERRADO — cache antigo, não instale |
 
-## Classificação atual
+PowerShell:
+```powershell
+(Get-Item "$env:USERPROFILE\Downloads\DarkWorld-Launcher-Setup.exe").Length
+# Deve ser ~4382791
+Get-FileHash "$env:USERPROFILE\Downloads\DarkWorld-Launcher-Setup.exe" -Algorithm SHA256
+# Deve começar com 3252C01E...
+```
 
-**READY_FOR_HUMAN_RETEST** — binário Tauri publicado no CDN; teste humano com screenshot pendente.
+### 4. Instalar e abrir
+
+- Deve abrir **janela gráfica** "Dark World Launcher" (não console)
+- Botões: Jogar, Reparar, ⚙
+- **Enviar screenshot**
+
+## SmartScreen / Chrome "arquivo perigoso"
+
+Normal para executável **não assinado**. Pode clicar "Manter" / "Executar mesmo assim".
+
+## Relatórios forenses completos
+
+Ver [`docs/forensics/`](/opt/darkworld/docs/forensics/) no servidor.
+
+## Ainda NOT_DELIVERED
+
+Até você confirmar GUI diferente com screenshot.

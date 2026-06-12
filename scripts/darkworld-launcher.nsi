@@ -43,10 +43,12 @@ SectionEnd
 
 Section "Uninstall"
     Delete "$INSTDIR\DarkWorld-Launcher.exe"
+    Delete "$INSTDIR\DarkWorld.exe"
     Delete "$INSTDIR\version.json"
     Delete "$INSTDIR\Uninstall.exe"
     Delete "$DESKTOP\Dark World.lnk"
     RMDir /r "$SMPROGRAMS\Dark World"
     RMDir "$INSTDIR"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorldLauncher"
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DarkWorld"
 SectionEnd

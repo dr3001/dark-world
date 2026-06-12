@@ -93,6 +93,20 @@ PYEOF
 
 python3 "$ROOT/scripts/validate-manifest.py" 2>/dev/null || true
 python3 "$ROOT/scripts/sync-manifest-db.py" 2>/dev/null || true
-bash "$ROOT/scripts/purge_cloudflare_cache.sh" 2>/dev/null || true
+
+# Update portal download links with cache-bust query from published hashes
+if [ -f "$DOWNLOADS/DarkWorld-Launcher-Setup.exe" ]; then
+  SETUP_HASH=$(sha256sum "$DOWNLOADS/DarkWorld-Launcher-Setup.exe" | awk '{print substr($1,1,8)}')
+  EXE_HASH=$(sha256sum "$DOWNLOADS/DarkWorld-Launcher.exe" | awk '{print substr($1,1,8)}')
+  for PORTAL in /var/www/zorionlabs/dark/index.html /var/www/zorionlabs/dark/downloads/index.html; do
+    [ -f "$PORTAL" ] || continue
+    sed -i "s|DarkWorld-Launcher-Setup.exe?v=[a-f0-9]*|DarkWorld-Launcher-Setup.exe?v=${SETUP_HASH}|g" "$PORTAL"
+    sed -i "s|DarkWorld-Launcher-Setup.exe\"|DarkWorld-Launcher-Setup.exe?v=${SETUP_HASH}\"|g" "$PORTAL"
+    sed -i "s|DarkWorld-Launcher.exe?v=[a-f0-9]*|DarkWorld-Launcher.exe?v=${EXE_HASH}|g" "$PORTAL"
+    sed -i "s|DarkWorld-Launcher.exe\"|DarkWorld-Launcher.exe?v=${EXE_HASH}\"|g" "$PORTAL"
+  done
+fi
+
+bash "$ROOT/scripts/purge_cloudflare_cache.sh" 2>/dev/null || echo "WARN: Cloudflare purge failed — users may get stale cache until manual purge"
 
 echo "Launcher artifacts deployed to CDN."
