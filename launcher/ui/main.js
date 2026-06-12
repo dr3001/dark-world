@@ -41,6 +41,10 @@ function applyState(s) {
 
 listen("launcher-state", (e) => applyState(e.payload));
 
+listen("game-exited", () => {
+  els.message.textContent = "Jogo encerrado. Pronto para jogar novamente.";
+});
+
 els.playBtn.addEventListener("click", async () => {
   els.playBtn.disabled = true;
   els.message.textContent = "Abrindo jogo...";

@@ -119,7 +119,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 "kill_game" => {
                     if let Some(state) = app.try_state::<crate::AppState>() {
                         let _ = crate::kill_game_process(&state);
-                        set_game_running(app, false);
+                        crate::game_monitor::on_game_exited(app);
                     }
                 }
                 "quit_launcher" => {

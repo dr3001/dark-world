@@ -1,11 +1,11 @@
 === Dark World World Load Audit ===
-Date: 2026-06-12T00:39:15Z
+Date: 2026-06-12T00:46:04Z
 [1] Export release Windows...
 Export warnings: 0
 [2] Headless world smoke (script check)...
 OK: World.gd contains procedural builders
-OK: DarkWorld.exe size=245541472 hash=eefdaab3e287971e00bfc0895420ca9e92a39ef7f400f9e1d53de23793af6346
+OK: DarkWorld.exe size=245541472 hash=76e8bc46e3ebaaba91fa215b408e58cc6b8d30bc511f25668a784f6f68384414
 [3] CDN hash check (if manifest reachable)...
-Remote game_version: 5.0.5
-Local version.json: 5.0.5
+Remote game_version: 5.0.6
+Local version.json: 5.0.6
 === AUDIT COMPLETE ===

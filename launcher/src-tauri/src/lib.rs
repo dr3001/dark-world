@@ -1,4 +1,5 @@
 mod api;
+mod game_monitor;
 mod logger;
 mod paths;
 mod settings;
@@ -26,7 +27,7 @@ pub(crate) struct AppState {
 }
 
 #[derive(Clone, Serialize)]
-struct LauncherState {
+pub(crate) struct LauncherState {
     server_online: bool,
     players_online: i64,
     local_version: String,
@@ -39,7 +40,7 @@ struct LauncherState {
     update_required: bool,
 }
 
-fn emit_state(app: &AppHandle, state: LauncherState) {
+pub(crate) fn emit_state(app: &AppHandle, state: LauncherState) {
     tray::update_tray_status(app, state.server_online);
     let _ = app.emit("launcher-state", state);
 }
@@ -335,6 +336,7 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>) -> Result<(), String>
 
     let behavior = load_settings().on_play;
     tray::hide_launcher_on_play(&app, &behavior);
+    game_monitor::start_game_monitor(app);
     Ok(())
 }
 
@@ -348,8 +350,10 @@ pub(crate) fn kill_game_process(state: &AppState) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn kill_game(state: State<'_, AppState>) -> Result<(), String> {
-    kill_game_process(&state)
+fn kill_game(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    kill_game_process(&state)?;
+    game_monitor::on_game_exited(&app);
+    Ok(())
 }
 
 impl Default for LauncherState {

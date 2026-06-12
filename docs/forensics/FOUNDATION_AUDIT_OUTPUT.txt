@@ -1,0 +1,362 @@
+=== DARK WORLD FOUNDATION AUDIT ===
+Date: 2026-06-12T00:46:02Z
+
+PASS: P1 Launcher: local Tauri exe (12661248 bytes)
+PASS: P1 Launcher: setup URL reachable
+PASS: P2 Update: manifest valid (game 5.0.6)
+PASS: P3 Login: API responds (401)
+PASS: P4 Register: API validates input
+PASS: P5 Forgot: portal page exists
+PASS: P5 Forgot: API responds
+PASS: P6 Download: zip hash matches manifest (ff651faa045f152b...)
+PASS: P7 Install: NSIS script present
+PASS: P8 Uninstall: NSIS uninstall section
+=== Dark World World Load Audit ===
+Date: 2026-06-12T00:46:04Z
+[1] Export release Windows...
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+ERROR: Bug: Dictionary::operator[] used when there was no value for the given key "deadzone". Please report.
+   at: operator[] (core/variant/dictionary.cpp:136)
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | Started Registering global classes... (43 steps)[39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   2% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   4% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   6% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   9% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  11% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  13% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  15% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  18% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  20% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  22% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  25% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  27% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  29% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  31% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  34% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  36% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  38% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  40% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  43% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  45% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  47% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  50% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  52% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  54% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  56% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  59% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  61% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  63% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  65% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  68% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  70% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  72% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  75% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  77% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  79% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  81% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  84% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  86% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  88% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  90% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  93% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  95% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[92m[ DONE ][39m [1mupdate_scripts_classes[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Scanning actions... (77 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Alien.blend[39m[0m
+[   1% ] [90m[1m_update_scan_actions[22m | Atlas_Monsters.png[39m[0m
+[   2% ] [90m[1m_update_scan_actions[22m | Birb.blend[39m[0m
+[   3% ] [90m[1m_update_scan_actions[22m | BlueDemon.blend[39m[0m
+[   5% ] [90m[1m_update_scan_actions[22m | Bunny.blend[39m[0m
+[   6% ] [90m[1m_update_scan_actions[22m | Cactoro.blend[39m[0m
+[   7% ] [90m[1m_update_scan_actions[22m | Demon.blend[39m[0m
+[   8% ] [90m[1m_update_scan_actions[22m | Dino.blend[39m[0m
+[  10% ] [90m[1m_update_scan_actions[22m | Fish.blend[39m[0m
+[  11% ] [90m[1m_update_scan_actions[22m | Frog.blend[39m[0m
+[  12% ] [90m[1m_update_scan_actions[22m | Monkroose.blend[39m[0m
+[  14% ] [90m[1m_update_scan_actions[22m | MushroomKing.blend[39m[0m
+[  15% ] [90m[1m_update_scan_actions[22m | Ninja.blend[39m[0m
+[  16% ] [90m[1m_update_scan_actions[22m | Orc.blend[39m[0m
+[  17% ] [90m[1m_update_scan_actions[22m | Orc_Skull.blend[39m[0m
+[  19% ] [90m[1m_update_scan_actions[22m | Tribal.blend[39m[0m
+[  20% ] [90m[1m_update_scan_actions[22m | Yeti.blend[39m[0m
+[  21% ] [90m[1m_update_scan_actions[22m | Alien.fbx[39m[0m
+[  23% ] [90m[1m_update_scan_actions[22m | Birb.fbx[39m[0m
+[  24% ] [90m[1m_update_scan_actions[22m | BlueDemon.fbx[39m[0m
+[  25% ] [90m[1m_update_scan_actions[22m | Bunny.fbx[39m[0m
+[  26% ] [90m[1m_update_scan_actions[22m | Cactoro.fbx[39m[0m
+[  28% ] [90m[1m_update_scan_actions[22m | Demon.fbx[39m[0m
+[  29% ] [90m[1m_update_scan_actions[22m | Dino.fbx[39m[0m
+[  30% ] [90m[1m_update_scan_actions[22m | Fish.fbx[39m[0m
+[  32% ] [90m[1m_update_scan_actions[22m | Frog.fbx[39m[0m
+[  33% ] [90m[1m_update_scan_actions[22m | Monkroose.fbx[39m[0m
+[  34% ] [90m[1m_update_scan_actions[22m | MushroomKing.fbx[39m[0m
+[  35% ] [90m[1m_update_scan_actions[22m | Ninja.fbx[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | Orc.fbx[39m[0m
+[  38% ] [90m[1m_update_scan_actions[22m | Orc_Skull.fbx[39m[0m
+[  39% ] [90m[1m_update_scan_actions[22m | Tribal.fbx[39m[0m
+[  41% ] [90m[1m_update_scan_actions[22m | Yeti.fbx[39m[0m
+[  42% ] [90m[1m_update_scan_actions[22m | Alien.gltf[39m[0m
+[  43% ] [90m[1m_update_scan_actions[22m | Atlas_Monsters.png[39m[0m
+[  44% ] [90m[1m_update_scan_actions[22m | Birb.gltf[39m[0m
+[  46% ] [90m[1m_update_scan_actions[22m | BlueDemon.gltf[39m[0m
+[  47% ] [90m[1m_update_scan_actions[22m | Bunny.gltf[39m[0m
+[  48% ] [90m[1m_update_scan_actions[22m | Cactoro.gltf[39m[0m
+[  50% ] [90m[1m_update_scan_actions[22m | Demon.gltf[39m[0m
+[  51% ] [90m[1m_update_scan_actions[22m | Dino.gltf[39m[0m
+[  52% ] [90m[1m_update_scan_actions[22m | Fish.gltf[39m[0m
+[  53% ] [90m[1m_update_scan_actions[22m | Frog.gltf[39m[0m
+[  55% ] [90m[1m_update_scan_actions[22m | Monkroose.gltf[39m[0m
+[  56% ] [90m[1m_update_scan_actions[22m | MushroomKing.gltf[39m[0m
+[  57% ] [90m[1m_update_scan_actions[22m | Ninja.gltf[39m[0m
+[  58% ] [90m[1m_update_scan_actions[22m | Orc.gltf[39m[0m
+[  60% ] [90m[1m_update_scan_actions[22m | Orc_Skull.gltf[39m[0m
+[  61% ] [90m[1m_update_scan_actions[22m | Tribal.gltf[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | Yeti.gltf[39m[0m
+[  64% ] [90m[1m_update_scan_actions[22m | Alien.obj[39m[0m
+[  65% ] [90m[1m_update_scan_actions[22m | Birb.obj[39m[0m
+[  66% ] [90m[1m_update_scan_actions[22m | BlueDemon.obj[39m[0m
+[  67% ] [90m[1m_update_scan_actions[22m | Bunny.obj[39m[0m
+[  69% ] [90m[1m_update_scan_actions[22m | Cactoro.obj[39m[0m
+[  70% ] [90m[1m_update_scan_actions[22m | Demon.obj[39m[0m
+[  71% ] [90m[1m_update_scan_actions[22m | Dino.obj[39m[0m
+[  73% ] [90m[1m_update_scan_actions[22m | Fish.obj[39m[0m
+[  74% ] [90m[1m_update_scan_actions[22m | Frog.obj[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | Monkroose.obj[39m[0m
+[  76% ] [90m[1m_update_scan_actions[22m | MushroomKing.obj[39m[0m
+[  78% ] [90m[1m_update_scan_actions[22m | Ninja.obj[39m[0m
+[  79% ] [90m[1m_update_scan_actions[22m | Orc.obj[39m[0m
+[  80% ] [90m[1m_update_scan_actions[22m | Orc_Skull.obj[39m[0m
+[  82% ] [90m[1m_update_scan_actions[22m | Tribal.obj[39m[0m
+[  83% ] [90m[1m_update_scan_actions[22m | Yeti.obj[39m[0m
+[  84% ] [90m[1m_update_scan_actions[22m | Alien.blend[39m[0m
+[  85% ] [90m[1m_update_scan_actions[22m | Atlas_Monsters.png[39m[0m
+[  87% ] [90m[1m_update_scan_actions[22m | Birb.blend[39m[0m
+[  88% ] [90m[1m_update_scan_actions[22m | Cactoro.blend[39m[0m
+[  89% ] [90m[1m_update_scan_actions[22m | Cat.blend[39m[0m
+[  91% ] [90m[1m_update_scan_actions[22m | Chicken.blend[39m[0m
+[  92% ] [90m[1m_update_scan_actions[22m | Dog.blend[39m[0m
+[  93% ] [90m[1m_update_scan_actions[22m | Fish.blend[39m[0m
+[  94% ] [90m[1m_update_scan_actions[22m | GreenBlob.blend[39m[0m
+[  96% ] [90m[1m_update_scan_actions[22m | GreenSpikyBlob.blend[39m[0m
+[  97% ] [90m[1m_update_scan_actions[22m | Mushnub.blend[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+ERROR: Blender path is invalid or not set, check your Editor Settings. Cannot configure blender path in headless mode.
+   at: query (modules/gltf/editor/editor_scene_importer_blend.cpp:519)
+[   0% ] [90m[1msavepack[22m | Started Packing (102 steps)[39m[0m
+[   1% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Alien.blend[39m[0m
+[   1% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Atlas_Monsters.png[39m[0m
+[   2% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Birb.blend[39m[0m
+[   3% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/BlueDemon.blend[39m[0m
+[   4% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Bunny.blend[39m[0m
+[   4% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Cactoro.blend[39m[0m
+[   5% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Demon.blend[39m[0m
+[   6% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Dino.blend[39m[0m
+[   7% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Fish.blend[39m[0m
+[   8% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Frog.blend[39m[0m
+[   8% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Monkroose.blend[39m[0m
+[   9% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/MushroomKing.blend[39m[0m
+[  10% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Ninja.blend[39m[0m
+[  11% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Orc.blend[39m[0m
+[  12% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Orc_Skull.blend[39m[0m
+[  12% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Tribal.blend[39m[0m
+[  13% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/Blends/Yeti.blend[39m[0m
+[  14% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Alien.fbx[39m[0m
+[  15% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Birb.fbx[39m[0m
+[  15% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/BlueDemon.fbx[39m[0m
+[  16% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Bunny.fbx[39m[0m
+[  17% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Cactoro.fbx[39m[0m
+[  18% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Demon.fbx[39m[0m
+[  19% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Dino.fbx[39m[0m
+[  19% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Fish.fbx[39m[0m
+[  20% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Frog.fbx[39m[0m
+[  21% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Monkroose.fbx[39m[0m
+[  22% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/MushroomKing.fbx[39m[0m
+[  23% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Ninja.fbx[39m[0m
+[  23% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Orc.fbx[39m[0m
+[  24% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Orc_Skull.fbx[39m[0m
+[  25% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Tribal.fbx[39m[0m
+[  26% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/FBX/Yeti.fbx[39m[0m
+[  26% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Alien.gltf[39m[0m
+[  27% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Atlas_Monsters.png[39m[0m
+[  28% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Birb.gltf[39m[0m
+[  29% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/BlueDemon.gltf[39m[0m
+[  30% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Bunny.gltf[39m[0m
+[  30% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Cactoro.gltf[39m[0m
+[  31% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Demon.gltf[39m[0m
+[  32% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Dino.gltf[39m[0m
+[  33% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Fish.gltf[39m[0m
+[  33% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Frog.gltf[39m[0m
+[  33% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Monkroose.gltf[39m[0m
+[  34% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/MushroomKing.gltf[39m[0m
+[  35% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Ninja.gltf[39m[0m
+[  36% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Orc.gltf[39m[0m
+[  37% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Orc_Skull.gltf[39m[0m
+[  37% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Tribal.gltf[39m[0m
+[  38% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/Yeti.gltf[39m[0m
+[  39% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Alien.obj[39m[0m
+[  40% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Birb.obj[39m[0m
+[  40% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/BlueDemon.obj[39m[0m
+[  41% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Bunny.obj[39m[0m
+[  42% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Cactoro.obj[39m[0m
+[  43% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Demon.obj[39m[0m
+[  44% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Dino.obj[39m[0m
+[  44% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Fish.obj[39m[0m
+[  45% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Frog.obj[39m[0m
+[  46% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Monkroose.obj[39m[0m
+[  47% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/MushroomKing.obj[39m[0m
+[  48% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Ninja.obj[39m[0m
+[  48% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Orc.obj[39m[0m
+[  49% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Orc_Skull.obj[39m[0m
+[  50% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Tribal.obj[39m[0m
+[  51% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Big/OBJ/Yeti.obj[39m[0m
+[  51% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Alien.blend[39m[0m
+[  52% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Atlas_Monsters.png[39m[0m
+[  53% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Birb.blend[39m[0m
+[  54% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Cactoro.blend[39m[0m
+[  55% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Cat.blend[39m[0m
+[  55% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Chicken.blend[39m[0m
+[  56% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Dog.blend[39m[0m
+[  57% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Fish.blend[39m[0m
+[  58% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/GreenBlob.blend[39m[0m
+[  59% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/GreenSpikyBlob.blend[39m[0m
+[  59% ] [90m[1msavepack[22m | Storing File: res://assets/quaternius/creatures/Ultimate Monsters/Blob/Blends/Mushnub.blend[39m[0m
+[  60% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-27428caabb96f351978d2270dbc14b02-Dragon.scn[39m[0m
+[  61% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-fb8a7670d454b43715b7551346e13146-Player.scn[39m[0m
+[  62% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-9da83bb9b3d9b0a49b6540e2b47ab9c8-DragonTest.scn[39m[0m
+[  62% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-92da877df6ab7c7a60130681515b3c33-TestLoader.scn[39m[0m
+[  63% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-58c4e3fbb715b52d0a85d7c571a9362f-Afterlife.scn[39m[0m
+[  64% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-742156800d8cc4d9995ea5ff4351d464-Login.scn[39m[0m
+[  65% ] [90m[1msavepack[22m | Storing File: res://.godot/exported/133200997/export-57a8a85058368be1f5628ef4b8140bf5-World.scn[39m[0m
+[  66% ] [90m[1msavepack[22m | Storing File: res://scripts/test/DragonTest.gdc[39m[0m
+[  66% ] [90m[1msavepack[22m | Storing File: res://scripts/test/TestLoader.gdc[39m[0m
+[  66% ] [90m[1msavepack[22m | Storing File: res://scripts/test/WorldLoader.gdc[39m[0m
+[  67% ] [90m[1msavepack[22m | Storing File: res://scripts/Afterlife.gdc[39m[0m
+[  68% ] [90m[1msavepack[22m | Storing File: res://scripts/BloodEffectSystem.gdc[39m[0m
+[  69% ] [90m[1msavepack[22m | Storing File: res://scripts/CameraController.gdc[39m[0m
+[  69% ] [90m[1msavepack[22m | Storing File: res://scripts/CharacterProfile.gdc[39m[0m
+[  70% ] [90m[1msavepack[22m | Storing File: res://scripts/ChatDisplay.gdc[39m[0m
+[  71% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatAudioSystem.gdc[39m[0m
+[  72% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatCameraFeedback.gdc[39m[0m
+[  73% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatClimateIntegration.gdc[39m[0m
+[  73% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatDecalSystem.gdc[39m[0m
+[  74% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatSystem.gdc[39m[0m
+[  75% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatVFXPerformanceBudget.gdc[39m[0m
+[  76% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatVisualEventSystem.gdc[39m[0m
+[  76% ] [90m[1msavepack[22m | Storing File: res://scripts/DragonAI.gdc[39m[0m
+[  77% ] [90m[1msavepack[22m | Storing File: res://scripts/DragonModel.gdc[39m[0m
+[  78% ] [90m[1msavepack[22m | Storing File: res://scripts/EntitySpawner.gdc[39m[0m
+[  79% ] [90m[1msavepack[22m | Storing File: res://scripts/EquipmentPanel.gdc[39m[0m
+[  80% ] [90m[1msavepack[22m | Storing File: res://scripts/GameLogger.gdc[39m[0m
+[  80% ] [90m[1msavepack[22m | Storing File: res://scripts/GroundImpactSystem.gdc[39m[0m
+[  81% ] [90m[1msavepack[22m | Storing File: res://scripts/HitFeedbackUI.gdc[39m[0m
+[  82% ] [90m[1msavepack[22m | Storing File: res://scripts/HitReactionSystem.gdc[39m[0m
+[  83% ] [90m[1msavepack[22m | Storing File: res://scripts/ImpactParticleSystem.gdc[39m[0m
+[  84% ] [90m[1msavepack[22m | Storing File: res://scripts/InventorySystem.gdc[39m[0m
+[  84% ] [90m[1msavepack[22m | Storing File: res://scripts/ItemTooltip.gdc[39m[0m
+[  85% ] [90m[1msavepack[22m | Storing File: res://scripts/Login.gdc[39m[0m
+[  86% ] [90m[1msavepack[22m | Storing File: res://scripts/LootTable.gdc[39m[0m
+[  87% ] [90m[1msavepack[22m | Storing File: res://scripts/Main.gdc[39m[0m
+[  87% ] [90m[1msavepack[22m | Storing File: res://scripts/MultiplayerSync.gdc[39m[0m
+[  88% ] [90m[1msavepack[22m | Storing File: res://scripts/NetworkClient.gdc[39m[0m
+[  89% ] [90m[1msavepack[22m | Storing File: res://scripts/OtherPlayer.gdc[39m[0m
+[  90% ] [90m[1msavepack[22m | Storing File: res://scripts/PlayerController.gdc[39m[0m
+[  91% ] [90m[1msavepack[22m | Storing File: res://scripts/PlayerModel.gdc[39m[0m
+[  91% ] [90m[1msavepack[22m | Storing File: res://scripts/ProjectileWindInfluenceVisual.gdc[39m[0m
+[  92% ] [90m[1msavepack[22m | Storing File: res://scripts/QuestJournal.gdc[39m[0m
+[  93% ] [90m[1msavepack[22m | Storing File: res://scripts/QuestSystem.gdc[39m[0m
+[  94% ] [90m[1msavepack[22m | Storing File: res://scripts/ShieldImpactVisualSystem.gdc[39m[0m
+[  95% ] [90m[1msavepack[22m | Storing File: res://scripts/SpeechBubble.gdc[39m[0m
+[  95% ] [90m[1msavepack[22m | Storing File: res://scripts/TerrainBuilder.gdc[39m[0m
+[  96% ] [90m[1msavepack[22m | Storing File: res://scripts/World.gdc[39m[0m
+[  97% ] [90m[1msavepack[22m | Storing File: res://scripts/WorldSimulation.gdc[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/WorldState.gdc[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/models/Dragon.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/models/Player.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/test/DragonTest.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/test/TestLoader.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/Afterlife.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/Login.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scenes/World.tscn.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/test/DragonTest.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/test/TestLoader.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/test/WorldLoader.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/Afterlife.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/BloodEffectSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CameraController.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CharacterProfile.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/ChatDisplay.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatAudioSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatCameraFeedback.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatClimateIntegration.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatDecalSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatVFXPerformanceBudget.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/CombatVisualEventSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/DragonAI.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/DragonModel.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/EntitySpawner.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/EquipmentPanel.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/GameLogger.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/GroundImpactSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/HitFeedbackUI.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/HitReactionSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/ImpactParticleSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/InventorySystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/ItemTooltip.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/Login.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/LootTable.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/Main.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/MultiplayerSync.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/NetworkClient.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/OtherPlayer.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/PlayerController.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/PlayerModel.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/ProjectileWindInfluenceVisual.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/QuestJournal.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/QuestSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/ShieldImpactVisualSystem.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/SpeechBubble.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/TerrainBuilder.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/World.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/WorldSimulation.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://scripts/WorldState.gd.remap[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://.godot/global_script_class_cache.cfg[39m[0m
+[  98% ] [90m[1msavepack[22m | Storing File: res://project.binary[39m[0m
+[92m[ DONE ][39m [1msavepack[22m
+[0m
+Export warnings: 0
+[2] Headless world smoke (script check)...
+OK: World.gd contains procedural builders
+OK: DarkWorld.exe size=245541472 hash=76e8bc46e3ebaaba91fa215b408e58cc6b8d30bc511f25668a784f6f68384414
+[3] CDN hash check (if manifest reachable)...
+Remote game_version: 5.0.6
+Local version.json: 5.0.6
+=== AUDIT COMPLETE ===
+PASS: P9 Init: Godot release export OK
+PASS: P10 World: procedural builders present
+
+=== SUMMARY ===
+PASS: 12  FAIL: 0  WARN: 0
