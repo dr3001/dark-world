@@ -289,18 +289,26 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
     Ok(())
 }
 
-#[tauri::command]
-async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if state
+pub(crate) fn current_state(app: &AppHandle) -> LauncherState {
+    app.try_state::<AppState>()
+        .and_then(|s| s.last_state.lock().ok().map(|g| g.clone()))
+        .unwrap_or_default()
+}
+
+pub(crate) async fn run_bootstrap_once(app: AppHandle, force_repair: bool) -> LauncherState {
+    let app_state = app.state::<AppState>();
+    if app_state
         .bootstrapping
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
     {
-        logger::log_step("STARTUP", "bootstrap already running — skip duplicate invoke");
-        return Ok(());
+        logger::log_step("STARTUP", "bootstrap already running — returning last state");
+        return current_state(&app);
     }
-    let result = run_bootstrap(app.clone(), false).await;
-    state.bootstrapping.store(false, Ordering::SeqCst);
+
+    let result = run_bootstrap(app.clone(), force_repair).await;
+    app_state.bootstrapping.store(false, Ordering::SeqCst);
+
     if let Err(ref e) = result {
         logger::log(&format!("Bootstrap error: {e}"));
         let friendly = match e.as_str() {
@@ -317,30 +325,32 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
             }
             _ => format!("Falha na verificação: {e}. Use Reparar."),
         };
-        let last = app
-            .try_state::<AppState>()
-            .and_then(|s| s.last_state.lock().ok().map(|g| g.clone()))
-            .unwrap_or_default();
-        emit_state(
-            &app,
-            LauncherState {
-                message: friendly,
-                server_online: last.server_online,
-                players_online: last.players_online,
-                local_version: read_local_version(),
-                remote_version: last.remote_version,
-                can_play: false,
-                ..Default::default()
-            },
-        );
+        let last = current_state(&app);
+        let err_state = LauncherState {
+            message: friendly,
+            server_online: last.server_online,
+            players_online: last.players_online,
+            local_version: read_local_version(),
+            remote_version: last.remote_version,
+            can_play: false,
+            ..Default::default()
+        };
+        emit_state(&app, err_state.clone());
+        return err_state;
     }
-    Ok(())
+
+    current_state(&app)
 }
 
 #[tauri::command]
-async fn repair_game(app: AppHandle) -> Result<(), String> {
+async fn bootstrap(app: AppHandle) -> Result<LauncherState, String> {
+    Ok(run_bootstrap_once(app, false).await)
+}
+
+#[tauri::command]
+async fn repair_game(app: AppHandle) -> Result<LauncherState, String> {
     logger::log("Repair requested");
-    run_bootstrap(app, true).await
+    Ok(run_bootstrap_once(app, true).await)
 }
 
 #[tauri::command]
@@ -481,6 +491,12 @@ pub fn run() {
                 tray::setup_window_close_to_tray(&win);
             }
             tray::setup_tray(app.handle())?;
+            // Bootstrap from Rust — UI must not depend solely on JS invoke/events
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(400)).await;
+                let _ = run_bootstrap_once(handle, false).await;
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

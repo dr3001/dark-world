@@ -1,6 +1,6 @@
 [package]
 name = "darkworld-launcher"
-version = "1.0.3"
+version = "1.0.4"
 description = "Dark World Game Launcher"
 authors = ["Zorion Labs"]
 edition = "2021"
