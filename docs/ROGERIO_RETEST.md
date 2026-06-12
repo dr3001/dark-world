@@ -1,70 +1,65 @@
-# Rogério — CAUSA RAIZ ENCONTRADA + Re-teste Obrigatório
+# ROGERIO RETEST — UX Tribunal v5.0.6
 
-**Data:** 2026-06-12  
-**Classificação:** ROOT_CAUSE_FOUND → FIXED_WAITING_HUMAN_TEST
+**Classification target:** READY_FOR_HUMAN_RETEST  
+**Current:** WORKING_WITH_GAPS (launcher binary pending CI)
 
-## Por que você viu o mesmo comportamento
+## Download verification
 
-Você baixou da home, mas **Cloudflare entregou o instalador ANTIGO em cache**:
+| Check | Expected |
+|-------|----------|
+| Setup size | ~4.4 MB (Tauri, not 23 MB Node CLI) |
+| Game version after update | **5.0.6** |
+| Launcher version (after CI) | **1.0.1** |
 
-| | Instalador correto (servidor) | O que você recebeu (cache CF) |
-|--|-------------------------------|-------------------------------|
-| Tamanho | **~4,2 MB** | **~23 MB** |
-| Hash | `3252c01e...` | `061a1102...` |
-| Produto | Tauri GUI | Node CLI (console) |
-| Comportamento | Janela gráfica | Abre e fecha = "crash" |
+Home: `https://dark.zorionlabs.net/`  
+Use cache-bust link if stale: `DarkWorld-Launcher-Setup.exe?v=3252c01e`
 
-O manifest no servidor já estava certo. O link da home **não tinha cache-bust**, então o navegador/CDN serviu arquivo de **11 Jun 23:21**.
+Game manifest: `https://dark.zorionlabs.net/downloads/launcher/manifest.json`
 
-## O que fazer AGORA
+## YES/NO checklist (Rogério fills)
 
-### 1. Limpar instalação antiga (manual)
+| Gate | Rogério |
+|------|---------|
+| Launcher atualiza sem reiniciar? | |
+| Botão Jogar libera automaticamente? | |
+| Launcher minimiza para tray? | |
+| Console desapareceu? | |
+| UID Warning eliminado? | |
+| Login funcionando? | |
+| Registro funcionando? | |
+| Recuperação de senha funcionando? | |
+| Mundo carregado corretamente? | |
+| NPCs visíveis? | |
+| Cidade visível? | |
+| Castelo visível? | |
+| Placeholders removidos? | |
+| Root cause dos bugs encontrada? | SIM (see forensics/) |
 
-```
-Configurações → Aplicativos → Desinstalar TODAS entradas "Dark World"
-Apagar pasta: C:\Program Files\Dark World
-Apagar pasta: %LOCALAPPDATA%\DarkWorld
-Apagar atalho Desktop: Dark World.lnk
-```
+## Screenshots required
 
-### 2. Baixar pelo link NOVO (com ?v=)
+1. Launcher after update — Jogar enabled
+2. Game running — no console
+3. Login screen
+4. World spawn — structures visible
+5. Tray icon after Jogar
 
-Abra: https://dark.zorionlabs.net
+## Logs if failure
 
-Clique **Baixar Launcher (Windows)** — a URL deve conter:
-```
-/downloads/DarkWorld-Launcher-Setup.exe?v=3252c01e
-```
+- `%LOCALAPPDATA%/DarkWorld/logs/launcher/launcher.log`
+- `%LOCALAPPDATA%/DarkWorld/logs/game/game.log`
 
-### 3. ANTES de instalar — verificar tamanho
+## Reports
 
-| Tamanho do arquivo | Significado |
-|--------------------|-------------|
-| **~4,2 MB** | Correto (Tauri GUI) |
-| **~23 MB** | ERRADO — cache antigo, não instale |
+All forensics in `/opt/darkworld/docs/forensics/`:
 
-PowerShell:
-```powershell
-(Get-Item "$env:USERPROFILE\Downloads\DarkWorld-Launcher-Setup.exe").Length
-# Deve ser ~4382791
-Get-FileHash "$env:USERPROFILE\Downloads\DarkWorld-Launcher-Setup.exe" -Algorithm SHA256
-# Deve começar com 3252C01E...
-```
-
-### 4. Instalar e abrir
-
-- Deve abrir **janela gráfica** "Dark World Launcher" (não console)
-- Botões: Jogar, Reparar, ⚙
-- **Enviar screenshot**
-
-## SmartScreen / Chrome "arquivo perigoso"
-
-Normal para executável **não assinado**. Pode clicar "Manter" / "Executar mesmo assim".
-
-## Relatórios forenses completos
-
-Ver [`docs/forensics/`](/opt/darkworld/docs/forensics/) no servidor.
-
-## Ainda NOT_DELIVERED
-
-Até você confirmar GUI diferente com screenshot.
+- UPDATE_FLOW_REPORT.md
+- PLAY_BUTTON_ROOT_CAUSE.md
+- LAUNCHER_BEHAVIOR_REPORT.md
+- TRAY_IMPLEMENTATION_REPORT.md
+- LOGGING_SYSTEM_REPORT.md
+- RESOURCE_VALIDATION_REPORT.md
+- AUTH_FLOW_REPORT.md
+- EMPTY_WORLD_ROOT_CAUSE.md
+- VISUAL_VALIDATION_REPORT.md
+- HUMAN_E2E_REPORT.md
+- PLACEHOLDER_PURGE_REPORT.md

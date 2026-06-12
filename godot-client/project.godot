@@ -1,9 +1,14 @@
 ; Dark World Prototype
 [application]
+
 config/name="Dark World"
 config/description="Dark Fantasy Medieval Brutal MMO"
-config/version="0.2.0"
+config/version="5.0.6"
 run/main_scene="res://scenes/Login.tscn"
+
+[autoload]
+
+GameLogger="*res://scripts/GameLogger.gd"
 
 [rendering]
 renderer/rendering_method="forward_plus"

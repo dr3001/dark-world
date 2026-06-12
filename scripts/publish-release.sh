@@ -26,10 +26,10 @@ rm -rf "$BUILD/windows" "$BUILD/DarkWorld.app"
 mkdir -p "$BUILD/windows"
 
 echo "[2/9] Export Windows..."
-GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | grep -E "DONE|ERROR|export" || true
+GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-release "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | grep -E "DONE|ERROR|export|WARNING|invalid" || true
 
 echo "[3/9] Export macOS..."
-GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "macOS" "$BUILD/DarkWorld.app" 2>&1 | grep -E "DONE|ERROR|export" || true
+GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-release "macOS" "$BUILD/DarkWorld.app" 2>&1 | grep -E "DONE|ERROR|export|WARNING|invalid" || true
 
 echo "[4/9] Package game..."
 cd "$BUILD"

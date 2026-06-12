@@ -46,6 +46,7 @@ els.playBtn.addEventListener("click", async () => {
   els.message.textContent = "Abrindo jogo...";
   try {
     await invoke("launch_game");
+    els.message.textContent = "Jogo em execução. Launcher na bandeja.";
   } catch (err) {
     els.message.textContent = "Erro ao abrir jogo: " + err;
     els.playBtn.disabled = false;

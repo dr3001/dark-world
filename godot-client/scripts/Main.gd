@@ -11,6 +11,7 @@ const LANDING_URL = "https://dark.zorionlabs.net"
 @onready var status_label: Label = $"StatusLabel"
 @onready var enter_btn: Button = $"EnterButton"
 @onready var create_btn: Button = $"CreateAccountButton"
+@onready var forgot_btn: Button = $"ForgotPasswordButton"
 @onready var quit_btn: Button = $"QuitButton"
 @onready var email_input: LineEdit = $"EmailInput"
 @onready var password_input: LineEdit = $"PasswordInput"
@@ -22,6 +23,8 @@ func _ready():
 	add_child(network)
 	enter_btn.pressed.connect(_on_enter_pressed)
 	create_btn.pressed.connect(_on_create_account_pressed)
+	if forgot_btn:
+		forgot_btn.pressed.connect(_on_forgot_password_pressed)
 	quit_btn.pressed.connect(_on_quit_pressed)
 	_set_status("Digite email e senha para entrar no Vale Cinzento.")
 	enter_btn.disabled = false
@@ -64,6 +67,10 @@ func _on_create_account_pressed():
 	OS.shell_open(LANDING_URL + "/register")
 	_set_status("Abra o navegador para criar sua conta.")
 
+func _on_forgot_password_pressed():
+	OS.shell_open(LANDING_URL + "/forgot-password/")
+	_set_status("Abra o navegador para recuperar sua senha.")
+
 func _on_character_created(data):
 	if data and data.has("character"):
 		current_entity_id = data["character"]["entity_id"]
@@ -86,4 +93,5 @@ func _on_quit_pressed():
 func _set_status(msg: String):
 	if status_label:
 		status_label.text = msg
-	print("[Main] ", msg)
+	if GameLogger:
+		GameLogger.write_log("[Main] " + msg)

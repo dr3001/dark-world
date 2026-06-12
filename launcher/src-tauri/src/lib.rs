@@ -1,5 +1,8 @@
 mod api;
+mod logger;
 mod paths;
+mod settings;
+mod tray;
 mod updater;
 
 use api::{
@@ -10,13 +13,16 @@ use paths::{
     find_game_executable, get_installation_id, read_local_version, write_local_version, game_dir,
 };
 use serde::Serialize;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{AppHandle, Emitter, State};
+use settings::load_settings;
+use std::process::Child;
+use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
+use tauri::{AppHandle, Emitter, Manager, State};
 use updater::{apply_package, cache_download_path, download_file, verify_sha256};
 
 #[derive(Default)]
-struct AppState {
+pub(crate) struct AppState {
     bootstrapping: AtomicBool,
+    game_child: Mutex<Option<Child>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -34,10 +40,11 @@ struct LauncherState {
 }
 
 fn emit_state(app: &AppHandle, state: LauncherState) {
+    tray::update_tray_status(app, state.server_online);
     let _ = app.emit("launcher-state", state);
 }
 
-async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String> {
+pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
@@ -199,11 +206,23 @@ async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<(), String>
         state.message = format!("v{} — Pronto.", local);
     }
 
+    let updated_local = read_local_version();
+    state.local_version = updated_local.clone();
+    state.update_required =
+        manifest.force_update || version_lt(&updated_local, min_version);
+
     let play_ok = find_game_executable().is_some()
         && server_online
         && !state.update_required
-        && read_local_version() == manifest.game_version;
+        && updated_local == manifest.game_version;
     state.can_play = play_ok;
+    if play_ok {
+        state.message = format!("v{} — Pronto para jogar.", updated_local);
+    }
+    logger::log(&format!(
+        "Bootstrap complete: can_play={play_ok} local={updated_local} remote={}",
+        manifest.game_version
+    ));
     emit_state(&app, state);
     Ok(())
 }
@@ -220,6 +239,7 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
     let result = run_bootstrap(app.clone(), false).await;
     state.bootstrapping.store(false, Ordering::SeqCst);
     if let Err(ref e) = result {
+        logger::log(&format!("Bootstrap error: {e}"));
         emit_state(
             &app,
             LauncherState {
@@ -235,6 +255,7 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 
 #[tauri::command]
 async fn repair_game(app: AppHandle) -> Result<(), String> {
+    logger::log("Repair requested");
     run_bootstrap(app, true).await
 }
 
@@ -246,66 +267,89 @@ async fn fetch_changelog_cmd() -> Result<String, String> {
 
 #[tauri::command]
 fn get_settings() -> Result<serde_json::Value, String> {
+    let s = load_settings();
     Ok(serde_json::json!({
         "game_dir": paths::game_dir().to_string_lossy(),
         "installation_id": get_installation_id(),
         "local_version": read_local_version(),
         "api_base": paths::API_BASE,
         "cdn_base": paths::CDN_BASE,
+        "on_play": s.on_play,
+        "logs_dir": logger::logs_dir().to_string_lossy(),
     }))
+}
+
+pub(crate) fn open_game_folder_internal() -> Result<(), String> {
+    let dir = game_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    logger::open_path(&dir)
 }
 
 #[tauri::command]
 fn open_game_folder() -> Result<(), String> {
-    let dir = game_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    open_game_folder_internal()
 }
 
 #[tauri::command]
-fn launch_game() -> Result<(), String> {
+fn open_logs_folder() -> Result<(), String> {
+    logger::open_logs_folder()
+}
+
+fn spawn_game_process() -> Result<Child, String> {
     let exe = find_game_executable().ok_or("Executável do jogo não encontrado. Use Reparar.")?;
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new(&exe)
             .current_dir(exe.parent().unwrap_or(game_dir().as_path()))
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| format!("spawn failed: {e}"))?;
+            .map_err(|e| format!("spawn failed: {e}"))
     }
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new(&exe)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| format!("spawn failed: {e}"))?;
+            .map_err(|e| format!("spawn failed: {e}"))
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         std::process::Command::new(&exe)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| format!("spawn failed: {e}"))?;
+            .map_err(|e| format!("spawn failed: {e}"))
+    }
+}
+
+#[tauri::command]
+fn launch_game(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let child = spawn_game_process()?;
+    logger::log("Game launched");
+    if let Ok(mut guard) = state.game_child.lock() {
+        *guard = Some(child);
+    }
+    tray::set_game_running(&app, true);
+
+    let behavior = load_settings().on_play;
+    tray::hide_launcher_on_play(&app, &behavior);
+    Ok(())
+}
+
+pub(crate) fn kill_game_process(state: &AppState) -> Result<(), String> {
+    let mut guard = state.game_child.lock().map_err(|e| e.to_string())?;
+    if let Some(mut child) = guard.take() {
+        let _ = child.kill();
+        logger::log("Game process killed");
     }
     Ok(())
+}
+
+#[tauri::command]
+fn kill_game(state: State<'_, AppState>) -> Result<(), String> {
+    kill_game_process(&state)
 }
 
 impl Default for LauncherState {
@@ -327,16 +371,27 @@ impl Default for LauncherState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    logger::init();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::default())
+        .manage(tray::TrayState::default())
+        .setup(|app| {
+            if let Some(win) = app.get_webview_window("main") {
+                tray::setup_window_close_to_tray(&win);
+            }
+            tray::setup_tray(app.handle())?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             bootstrap,
             repair_game,
             fetch_changelog_cmd,
             launch_game,
+            kill_game,
             get_settings,
-            open_game_folder
+            open_game_folder,
+            open_logs_folder
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri application");

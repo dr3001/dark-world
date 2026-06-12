@@ -726,7 +726,7 @@ addRoute("POST", "/auth/reset-password", async (req, res) => {
   if (!user) return json(res, { ok: true }); // don't reveal existence
   const token = randomBytes(32).toString("hex");
   await query("INSERT INTO password_resets (user_id,token) VALUES ($1,$2)", [user.id, token]);
-  json(res, { ok: true, reset_token: token, brevo: process.env.BREVO_API_KEY ? "configured" : "not_configured" });
+  json(res, { ok: true, message: "Se o email existir, enviaremos instrucoes de recuperacao." });
 });
 
 addRoute("GET", "/friends/([^/]+)", async (_req, res, matches) => {

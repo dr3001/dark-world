@@ -35,10 +35,11 @@ var npc_dialogs: Dictionary = {
 }
 
 func _ready():
-	print("[WORLD] START")
+	GameLogger.write_log("[WORLD] START")
 	hp_bar = get_node_or_null("HUD/HPBar"); hp_text = get_node_or_null("HUD/HPText")
 	fps_label = get_node_or_null("HUD/FPS"); quest_text = get_node_or_null("HUD/QuestText")
 	pos_label = get_node_or_null("HUD/Position"); obj_label = get_node_or_null("HUD/ObjectCount")
+	_hide_debug_hud()
 	dialog_panel = get_node_or_null("HUD/DialogPanel")
 	dialog_name_label = get_node_or_null("HUD/DialogPanel/DialogName")
 	dialog_text_label = get_node_or_null("HUD/DialogPanel/DialogText")
@@ -50,7 +51,7 @@ func _ready():
 	
 	# BUILD WORLD FIRST — before any script loading
 	# This ensures Windows gets the same world as Mac
-	print("[WORLD] Building world...")
+	GameLogger.write_log("[WORLD] Building world...")
 	_build_plaza()
 	_spawn_player()
 	_build_village()
@@ -61,8 +62,10 @@ func _ready():
 	_spawn_dragon()
 	_build_trees()
 	_build_road_torches()
-	print("[WORLD] DONE - Trees:", tree_count, " Houses:", house_count, " NPCs:", npc_count, " Dragons:", dragon_count)
-	print("[WORLD] Vale Cinzento — ", get_child_count(), " objetos carregados")
+	GameLogger.write_log("[WORLD] DONE - Trees:" + str(tree_count) + " Houses:" + str(house_count) + " NPCs:" + str(npc_count) + " Dragons:" + str(dragon_count))
+	GameLogger.write_log("[WORLD] Vale Cinzento — " + str(get_child_count()) + " objetos carregados")
+	if obj_label and not OS.is_debug_build():
+		obj_label.visible = false
 	
 	# NOW load optional systems
 	if inventory_panel: inventory_panel.visible = false
@@ -547,19 +550,30 @@ func _torch(pos: Vector3):
 	t.add_child(light)
 	add_child(t)
 
+func _hide_debug_hud():
+	if OS.is_debug_build():
+		return
+	if fps_label:
+		fps_label.visible = false
+	if pos_label:
+		pos_label.visible = false
+	if obj_label:
+		obj_label.visible = false
+
 func _log(msg: String):
 	if quest_text: quest_text.text = msg
-	print("[WORLD] ", msg)
+	GameLogger.write_log("[WORLD] " + msg)
 
 func _process(delta):
-	if fps_label: fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
-	if obj_label: obj_label.text = "Obj: " + str(get_child_count())
+	if OS.is_debug_build():
+		if fps_label: fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
+		if obj_label: obj_label.text = "Obj: " + str(get_child_count())
 	if player and hp_text:
 		var hp = player.get("hp") if player.get("hp") != null else 100.0
 		var mhp = player.get("max_hp") if player.get("max_hp") != null else 100.0
 		hp_text.text = "HP: " + str(int(hp)) + "/" + str(int(mhp))
 		if hp_bar and mhp > 0: hp_bar.size.x = 220 * (hp / mhp)
-	if player and pos_label:
+	if player and pos_label and OS.is_debug_build():
 		pos_label.text = str(int(player.global_position.x)) + ", " + str(int(player.global_position.y)) + ", " + str(int(player.global_position.z))
 	if char_profile:
 		if level_label: level_label.text = char_profile.get_level_text()
@@ -653,28 +667,28 @@ func _handle_dialog_key(keycode: int):
 
 func _load_character_data():
 	if not net or character_id == "":
-		print("[WORLD] No character_id — skipping server load")
+		GameLogger.write_log("[WORLD] No character_id — skipping server load")
 		return
-	print("[WORLD] Loading character data: ", character_id)
+	GameLogger.write_log("[WORLD] Loading character data: " + character_id)
 	net.get_stats(character_id, func(data):
 		if data and data.has("stats") and char_profile:
 			char_profile.load_from_server(data["stats"])
-			print("[WORLD] Stats loaded — Level:", char_profile.get_stat("level"), " Zorium:", char_profile.get_stat("zorium"))
+			GameLogger.write_log("[WORLD] Stats loaded — Level:" + str(char_profile.get_stat("level")) + " Zorium:" + str(char_profile.get_stat("zorium")))
 	)
 	net.get_inventory(character_id, func(data):
 		if data and data.has("inventory") and inv_system:
 			inv_system.load_from_server(data["inventory"])
-			print("[WORLD] Inventory loaded — ", data["inventory"].size(), " items")
+			GameLogger.write_log("[WORLD] Inventory loaded — " + str(data["inventory"].size()) + " items")
 	)
 	net.get_equipment(character_id, func(data):
 		if data and data.has("equipment") and equip_panel_ui:
 			equip_panel_ui.load_from_server(data["equipment"])
-			print("[WORLD] Equipment loaded")
+			GameLogger.write_log("[WORLD] Equipment loaded")
 	)
 	net.get_quests(character_id, func(data):
 		if data and data.has("quests") and journal:
 			journal.load_from_server(data["quests"])
-			print("[WORLD] Quests loaded — ", data["quests"].size(), " quests")
+			GameLogger.write_log("[WORLD] Quests loaded — " + str(data["quests"].size()) + " quests")
 	)
 	var alleg_http = HTTPRequest.new(); add_child(alleg_http)
 	alleg_http.request_completed.connect(func(_r, code, _h, resp):
@@ -692,7 +706,7 @@ func _load_character_data():
 			var pos = data["save"].get("position", {})
 			if pos and pos.has("x"):
 				player.global_position = Vector3(float(pos["x"]), float(pos["y"]), float(pos["z"]))
-				print("[WORLD] Position loaded from save: ", player.global_position)
+				GameLogger.write_log("[WORLD] Position loaded from save: " + str(player.global_position))
 	)
 
 func _heal_player():
@@ -738,7 +752,7 @@ func _manual_save():
 	if save_indicator: save_indicator.text = "Salvando..."
 	if save_indicator: save_indicator.visible = true
 	net.save_game(character_id, player.global_position, func(data):
-		print("[WORLD] Save result: ", data)
+		GameLogger.write_log("[WORLD] Save result: " + str(data))
 	)
 	_hide_save_indicator(1.5)
 
@@ -767,6 +781,8 @@ func _on_target_died(target: Node3D, killer: Node3D):
 func _on_target_blocked(target: Node3D):
 	if shield_vfx: shield_vfx.block_light(target.global_position)
 	if hit_ui: hit_ui.show_blocked(target.global_position)
+
+func _show_profile():
 	if character_id == "" or not dialog_panel: return
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):
@@ -786,6 +802,10 @@ func _on_target_blocked(target: Node3D):
 	, CONNECT_ONE_SHOT)
 	http.request("http://5.78.142.138:9000/lore/character/" + character_id)
 
+func _hide_save_indicator(delay: float):
+	await get_tree().create_timer(delay).timeout
+	if save_indicator: save_indicator.visible = false
+
 func _debug_vfx(keycode: int):
 	if not player: return
 	var ppos = player.global_position + Vector3(0, 1, 0)
@@ -793,7 +813,7 @@ func _debug_vfx(keycode: int):
 		if blood_fx: blood_fx.clear_all()
 		if decal_fx: decal_fx.clear_all()
 		if camera_fx: camera_fx.reset_camera()
-		print("[VFX] Cleared all effects")
+		GameLogger.write_log("[VFX] Cleared all effects")
 	elif keycode == KEY_1:
 		if blood_fx: blood_fx.splash_small(ppos)
 		if impact_fx: impact_fx.spawn_impact("metal", ppos, Vector3.RIGHT)
@@ -839,8 +859,6 @@ func _debug_vfx(keycode: int):
 	elif keycode == KEY_9:
 		if impact_fx: impact_fx.spawn_impact("wind", ppos, Vector3.RIGHT)
 		if audio_fx: audio_fx.play_arrow()
-	await get_tree().create_timer(delay).timeout
-	if save_indicator: save_indicator.visible = false
 
 func _on_inventory_item_selected(slot_index: int, item_data: Dictionary):
 	var slot_type = item_data.get("slot_type", "")
@@ -850,5 +868,5 @@ func _on_inventory_item_selected(slot_index: int, item_data: Dictionary):
 	net.equip_item(character_id, item_id, slot_type, func(data):
 		if data and data.has("equipped"):
 			if equip_panel_ui: equip_panel_ui.equip_item(slot_type, item_data)
-			print("[WORLD] Equipped ", item_data.get("item_name", "?"), " in ", slot_type)
+			GameLogger.write_log("[WORLD] Equipped " + str(item_data.get("item_name", "?")) + " in " + slot_type)
 	)

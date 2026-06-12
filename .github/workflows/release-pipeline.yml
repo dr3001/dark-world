@@ -98,8 +98,8 @@ jobs:
       - name: Export Godot Windows + macOS
         run: |
           mkdir -p build/windows build
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-debug "Windows" build/windows/DarkWorld.exe
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-debug "macOS" build/DarkWorld.app
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-release "Windows" build/windows/DarkWorld.exe
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path godot-client --export-release "macOS" build/DarkWorld.app
           cd build && zip -r DarkWorld-Windows-portable.zip windows/ -x "*.pdb" -q
           tar -czf DarkWorld-Mac-debug.tar.gz DarkWorld.app/
 

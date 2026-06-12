@@ -53,7 +53,7 @@ func spawn_entity(entity: Dictionary):
 		var cyl = CylinderMesh.new()
 		cyl.height = 2
 		cyl.top_radius = 0.5
-			cyl.bottom_radius = 0.5
+		cyl.bottom_radius = 0.5
 		mesh_instance.mesh = cyl
 		var mat = StandardMaterial3D.new()
 		mat.albedo_color = Color(0.2, 0.3, 0.8)
