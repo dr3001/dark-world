@@ -45,7 +45,7 @@
 | 8 | **Game process monitor → launcher restore** | game_monitor.rs |
 | 9 | Game v5.0.6 published CDN | publish-release.sh |
 
-**Pendente deploy:** launcher Windows 1.0.1+ (CI rebuild)
+**Pendente deploy:** ~~launcher Windows 1.0.1+ (CI rebuild)~~ **PUBLICADO** commit `58b68bb`, hash `26fba9fb...`, setup `6aeae7a1...`
 
 ---
 
@@ -68,7 +68,7 @@ Nenhum P1 corrigido nesta sprint (congelado até P0 humano aprovar).
 
 | Pilar | Status | Notas |
 |-------|--------|-------|
-| 1 Launcher | **WORKING_WITH_GAPS** | Tauri GUI OK; CDN exe antigo |
+| 1 Launcher | **WORKING** | Tauri 1.0.1 on CDN (58b68bb) |
 | 2 Update | **WORKING** | Manifest + SHA256 + v5.0.6 |
 | 3 Login | **WORKING** | In-game + API |
 | 4 Register | **WORKING** | Portal /register/ |
@@ -107,7 +107,7 @@ Automated audit: **12 PASS, 0 FAIL** (`scripts/audit-foundation.sh`)
 
 | Component | Status |
 |-----------|--------|
-| LAUNCHER | WORKING_WITH_GAPS |
+| LAUNCHER | WORKING |
 | UPDATE | WORKING |
 | LOGIN | WORKING |
 | REGISTER | WORKING |
@@ -149,7 +149,7 @@ Automated audit: **12 PASS, 0 FAIL** (`scripts/audit-foundation.sh`)
 | Tag UX | `v5.0.6-ux-tribunal` |
 | Tag Foundation | `v5.0.6-foundation-p0` |
 | Game version | **5.0.6** |
-| Launcher version | **1.0.1** (code) / **1.0.0** (CDN exe) |
+| Launcher version | **1.0.1** (CDN exe commit 58b68bb) |
 
 ---
 

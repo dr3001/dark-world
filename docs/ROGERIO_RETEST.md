@@ -1,22 +1,30 @@
-# ROGERIO RETEST — UX Tribunal v5.0.6
+# ROGERIO RETEST — Foundation P0 v5.0.6 / Launcher 1.0.1
 
 **Classification target:** READY_FOR_HUMAN_RETEST  
-**Current:** WORKING_WITH_GAPS (launcher binary pending CI)
+**Automated foundation audit:** 12/12 PASS  
+**Human validation:** REQUIRED
 
-## Download verification
+## Download (cache-bust obrigatório)
 
-| Check | Expected |
-|-------|----------|
-| Setup size | ~4.4 MB (Tauri, not 23 MB Node CLI) |
-| Game version after update | **5.0.6** |
-| Launcher version (after CI) | **1.0.1** |
+| Artifact | URL | Hash prefix |
+|----------|-----|-------------|
+| Launcher Setup | `https://dark.zorionlabs.net/downloads/DarkWorld-Launcher-Setup.exe?v=6aeae7a1` | ~4.4 MB |
+| Game manifest | `https://dark.zorionlabs.net/downloads/launcher/manifest.json` | game **5.0.6** |
 
-Home: `https://dark.zorionlabs.net/`  
-Use cache-bust link if stale: `DarkWorld-Launcher-Setup.exe?v=3252c01e`
+Setup ~23 MB = cache antigo (Node CLI). Setup ~4.4 MB = Tauri correto.
 
-Game manifest: `https://dark.zorionlabs.net/downloads/launcher/manifest.json`
+## Ciclo completo a testar
 
-## YES/NO checklist (Rogério fills)
+1. Instalar / abrir launcher
+2. Update para **v5.0.6** — **Jogar** habilita sem fechar
+3. Jogar — launcher vai para tray, sem console Godot
+4. Login — entrar no mundo
+5. Ver plaza/vila/castelo no spawn (não só campo verde)
+6. Fechar jogo — **launcher reaparece** (novo)
+7. Reabrir jogo pelo launcher
+8. Esqueci senha — portal funciona
+
+## YES/NO checklist
 
 | Gate | Rogério |
 |------|---------|
@@ -24,42 +32,20 @@ Game manifest: `https://dark.zorionlabs.net/downloads/launcher/manifest.json`
 | Botão Jogar libera automaticamente? | |
 | Launcher minimiza para tray? | |
 | Console desapareceu? | |
-| UID Warning eliminado? | |
+| Jogo fecha → launcher volta? | |
 | Login funcionando? | |
 | Registro funcionando? | |
-| Recuperação de senha funcionando? | |
-| Mundo carregado corretamente? | |
+| Recuperação de senha? | |
+| Mundo carregado? | |
 | NPCs visíveis? | |
 | Cidade visível? | |
 | Castelo visível? | |
-| Placeholders removidos? | |
-| Root cause dos bugs encontrada? | SIM (see forensics/) |
 
-## Screenshots required
-
-1. Launcher after update — Jogar enabled
-2. Game running — no console
-3. Login screen
-4. World spawn — structures visible
-5. Tray icon after Jogar
-
-## Logs if failure
+## Logs
 
 - `%LOCALAPPDATA%/DarkWorld/logs/launcher/launcher.log`
 - `%LOCALAPPDATA%/DarkWorld/logs/game/game.log`
 
-## Reports
+## Relatório completo
 
-All forensics in `/opt/darkworld/docs/forensics/`:
-
-- UPDATE_FLOW_REPORT.md
-- PLAY_BUTTON_ROOT_CAUSE.md
-- LAUNCHER_BEHAVIOR_REPORT.md
-- TRAY_IMPLEMENTATION_REPORT.md
-- LOGGING_SYSTEM_REPORT.md
-- RESOURCE_VALIDATION_REPORT.md
-- AUTH_FLOW_REPORT.md
-- EMPTY_WORLD_ROOT_CAUSE.md
-- VISUAL_VALIDATION_REPORT.md
-- HUMAN_E2E_REPORT.md
-- PLACEHOLDER_PURGE_REPORT.md
+[`docs/forensics/FOUNDATION_STABILIZATION_REPORT.md`](/opt/darkworld/docs/forensics/FOUNDATION_STABILIZATION_REPORT.md)
