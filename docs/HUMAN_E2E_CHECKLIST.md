@@ -86,9 +86,9 @@ curl -s https://dark.zorionlabs.net/dw-api/api/launcher/status | jq .
 | Manifest 5 arquivos válidos | OK | `validate-manifest.py` passou |
 | API launcher status | OK | `game_version: 5.0.5`, `server: online` |
 | Node CLI arquivado | OK | `/opt/darkworld/archive/launcher-node-cli/` |
-| Tauri GUI no CDN | **PENDENTE** | CI run #16+ — executar `bash /opt/darkworld/scripts/fetch-github-launcher.sh` |
-| Teste humano Win/Mac | **PENDENTE** | Requer screenshot do tester |
+| Tauri GUI no CDN | **OK** | 12.661.248 bytes, hash `2e26d7c1...`, CI run 27385188556, `2026-06-12 00:12 UTC` |
+| Installer reconstruído | **OK** | hash `3252c01e...`, NSIS `darkworld-launcher.nsi` |
+| Node CLI removido do CDN | **OK** | sem strings `node_modules` no .exe publicado |
+| Teste humano Win/Mac | **PENDENTE** | Ver [`ROGERIO_RETEST.md`](ROGERIO_RETEST.md) |
 
-**Comando pós-CI:** `bash /opt/darkworld/scripts/fetch-github-launcher.sh`
-
-**Status automatizado:** Infra + portal + jogo OK. Binário Tauri aguardando CI (~10 min).
+**Status automatizado:** Tauri GUI publicado no CDN. Aguardando re-teste Rogério + screenshot.
