@@ -4,8 +4,7 @@ const { listen } = window.__TAURI__.event;
 const els = {
   serverStatus: document.getElementById("serverStatus"),
   playersOnline: document.getElementById("playersOnline"),
-  localVersion: document.getElementById("localVersion"),
-  remoteVersion: document.getElementById("remoteVersion"),
+  gameVersion: document.getElementById("gameVersion"),
   message: document.getElementById("message"),
   progressWrap: document.getElementById("progressWrap"),
   progressFill: document.getElementById("progressFill"),
@@ -16,7 +15,6 @@ const els = {
   settingsBtn: document.getElementById("settingsBtn"),
   settingsDialog: document.getElementById("settingsDialog"),
   settingsList: document.getElementById("settingsList"),
-  openFolderBtn: document.getElementById("openFolderBtn"),
   closeSettingsBtn: document.getElementById("closeSettingsBtn"),
 };
 
@@ -27,11 +25,13 @@ function setProgress(pct, text) {
 }
 
 function applyState(s) {
-  els.serverStatus.textContent = s.server_online ? "ONLINE" : "OFFLINE";
-  els.serverStatus.style.color = s.server_online ? "#88cc88" : "#f44";
-  els.playersOnline.textContent = String(s.players_online ?? 0);
-  els.localVersion.textContent = s.local_version || "—";
-  els.remoteVersion.textContent = s.remote_version || "—";
+  els.serverStatus.textContent = s.server_online ? "Online" : "Offline";
+  els.serverStatus.classList.toggle("online", Boolean(s.server_online));
+  els.serverStatus.classList.toggle("offline", !s.server_online);
+  const players = s.players_online ?? 0;
+  els.playersOnline.textContent =
+    players === 1 ? "1 jogador" : `${players} jogadores`;
+  els.gameVersion.textContent = s.local_version || "—";
   els.message.textContent = s.message || "";
   els.message.classList.toggle("update-required", Boolean(s.update_required));
   els.playBtn.disabled = !s.can_play;
@@ -43,6 +43,7 @@ listen("launcher-state", (e) => applyState(e.payload));
 
 listen("game-exited", () => {
   els.message.textContent = "Jogo encerrado. Pronto para jogar novamente.";
+  els.playBtn.disabled = false;
 });
 
 els.playBtn.addEventListener("click", async () => {
@@ -52,7 +53,7 @@ els.playBtn.addEventListener("click", async () => {
     await invoke("launch_game");
     els.message.textContent = "Jogo em execução. Launcher na bandeja.";
   } catch (err) {
-    els.message.textContent = "Erro ao abrir jogo: " + err;
+    els.message.textContent = String(err);
     els.playBtn.disabled = false;
   }
 });
@@ -63,7 +64,7 @@ els.repairBtn.addEventListener("click", async () => {
   try {
     await invoke("repair_game");
   } catch (err) {
-    els.message.textContent = "Reparo falhou: " + err;
+    els.message.textContent = "Reparo falhou. Tente novamente.";
   }
   els.repairBtn.disabled = false;
 });
@@ -75,31 +76,19 @@ els.settingsBtn.addEventListener("click", async () => {
       .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
       .join("");
     els.settingsDialog.showModal();
-  } catch (err) {
-    els.message.textContent = "Configurações indisponíveis: " + err;
-  }
-});
-
-els.openFolderBtn.addEventListener("click", async () => {
-  try {
-    await invoke("open_game_folder");
-  } catch (err) {
-    els.message.textContent = "Erro ao abrir pasta: " + err;
+  } catch {
+    els.message.textContent = "Configurações temporariamente indisponíveis.";
   }
 });
 
 els.closeSettingsBtn.addEventListener("click", () => els.settingsDialog.close());
 
 (async () => {
-  try {
-    const cl = await invoke("fetch_changelog");
-    els.changelog.textContent = cl || "Sem changelog.";
-  } catch {
-    els.changelog.textContent = "Changelog indisponível.";
-  }
+  const cl = await invoke("fetch_changelog");
+  els.changelog.textContent = cl || "Sem novidades publicadas.";
   try {
     await invoke("bootstrap");
-  } catch (err) {
-    els.message.textContent = "Erro: " + err;
+  } catch {
+    /* bootstrap emits friendly state via launcher-state */
   }
 })();

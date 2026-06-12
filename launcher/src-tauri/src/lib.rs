@@ -7,14 +7,13 @@ mod tray;
 mod updater;
 
 use api::{
-    fetch_changelog, fetch_manifest, fetch_status, fetch_version_policy, pick_game_file,
-    send_telemetry, platform_key, version_lt,
+    changelog_fallback, changelog_for_player, fetch_changelog, fetch_manifest, fetch_status,
+    fetch_version_policy, pick_game_file, send_telemetry, platform_key, version_lt,
 };
 use paths::{
     find_game_executable, get_installation_id, read_local_version, write_local_version, game_dir,
 };
 use serde::Serialize;
-use settings::load_settings;
 use std::process::Child;
 use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -24,6 +23,7 @@ use updater::{apply_package, cache_download_path, download_file, verify_sha256};
 pub(crate) struct AppState {
     bootstrapping: AtomicBool,
     game_child: Mutex<Option<Child>>,
+    last_state: Mutex<LauncherState>,
 }
 
 #[derive(Clone, Serialize)]
@@ -41,6 +41,11 @@ pub(crate) struct LauncherState {
 }
 
 pub(crate) fn emit_state(app: &AppHandle, state: LauncherState) {
+    if let Some(app_state) = app.try_state::<AppState>() {
+        if let Ok(mut last) = app_state.last_state.lock() {
+            *last = state.clone();
+        }
+    }
     tray::update_tray_status(app, state.server_online);
     let _ = app.emit("launcher-state", state);
 }
@@ -96,7 +101,7 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
         return Err("server offline".to_string());
     }
 
-    state.message = "Consultando manifest...".to_string();
+    state.message = "Verificando atualizações...".to_string();
     emit_state(&app, state.clone());
 
     let version_policy = fetch_version_policy(&client).await.ok();
@@ -169,7 +174,7 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
         })
         .await?;
 
-        state.message = "Validando SHA256...".to_string();
+        state.message = "Verificando arquivos...".to_string();
         state.progress = 100;
         emit_state(&app, state.clone());
 
@@ -177,10 +182,11 @@ pub(crate) async fn run_bootstrap(app: AppHandle, force_repair: bool) -> Result<
             let _ = app.emit(
                 "launcher-state",
                 LauncherState {
-                    message: format!("Hash inválido: {e}"),
+                    message: "Arquivo corrompido. Use Reparar para baixar novamente.".to_string(),
                     ..state.clone()
                 },
             );
+            logger::log(&format!("SHA256 verify failed: {e}"));
             e
         })?;
 
@@ -241,10 +247,18 @@ async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
     state.bootstrapping.store(false, Ordering::SeqCst);
     if let Err(ref e) = result {
         logger::log(&format!("Bootstrap error: {e}"));
+        let friendly = match e.as_str() {
+            "server offline" => "Não foi possível conectar ao servidor. Tente novamente em instantes.".to_string(),
+            "maintenance mode" => "Servidor em manutenção. Aguarde e tente novamente.".to_string(),
+            _ if e.contains("Hash") || e.contains("SHA") => {
+                "Arquivo corrompido. Use Reparar para baixar novamente.".to_string()
+            }
+            _ => "Não foi possível concluir a verificação. Use Reparar.".to_string(),
+        };
         emit_state(
             &app,
             LauncherState {
-                message: format!("Erro: {e}"),
+                message: friendly,
                 can_play: find_game_executable().is_some(),
                 local_version: read_local_version(),
                 ..Default::default()
@@ -262,21 +276,24 @@ async fn repair_game(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn fetch_changelog_cmd() -> Result<String, String> {
-    let client = reqwest::Client::new();
-    fetch_changelog(&client).await
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+    match fetch_changelog(&client).await {
+        Ok(text) => Ok(changelog_for_player(&text)),
+        Err(e) => {
+            logger::log(&format!("Changelog fetch failed (using fallback): {e}"));
+            Ok(changelog_fallback())
+        }
+    }
 }
 
 #[tauri::command]
 fn get_settings() -> Result<serde_json::Value, String> {
-    let s = load_settings();
     Ok(serde_json::json!({
-        "game_dir": paths::game_dir().to_string_lossy(),
-        "installation_id": get_installation_id(),
-        "local_version": read_local_version(),
-        "api_base": paths::API_BASE,
-        "cdn_base": paths::CDN_BASE,
-        "on_play": s.on_play,
-        "logs_dir": logger::logs_dir().to_string_lossy(),
+        "Versão instalada": read_local_version(),
+        "Instalação": "Este computador",
     }))
 }
 
@@ -300,8 +317,12 @@ fn spawn_game_process() -> Result<Child, String> {
     let exe = find_game_executable().ok_or("Executável do jogo não encontrado. Use Reparar.")?;
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         std::process::Command::new(&exe)
             .current_dir(exe.parent().unwrap_or(game_dir().as_path()))
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -310,6 +331,7 @@ fn spawn_game_process() -> Result<Child, String> {
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new(&exe)
+            .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -318,6 +340,7 @@ fn spawn_game_process() -> Result<Child, String> {
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         std::process::Command::new(&exe)
+            .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -327,15 +350,19 @@ fn spawn_game_process() -> Result<Child, String> {
 
 #[tauri::command]
 fn launch_game(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let child = spawn_game_process()?;
+    tray::hide_launcher_on_play(&app);
+    let child = match spawn_game_process() {
+        Ok(c) => c,
+        Err(e) => {
+            tray::show_launcher_window(&app);
+            return Err(format!("Não foi possível abrir o jogo. Use Reparar. ({e})"));
+        }
+    };
     logger::log("Game launched");
     if let Ok(mut guard) = state.game_child.lock() {
         *guard = Some(child);
     }
     tray::set_game_running(&app, true);
-
-    let behavior = load_settings().on_play;
-    tray::hide_launcher_on_play(&app, &behavior);
     game_monitor::start_game_monitor(app);
     Ok(())
 }

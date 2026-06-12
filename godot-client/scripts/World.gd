@@ -1,5 +1,7 @@
 extends Node3D
 
+const SERVER_URL = "https://dark.zorionlabs.net/dw-api"
+
 var player: CharacterBody3D
 var cam: Camera3D
 var hp_bar: ColorRect; var hp_text: Label; var fps_label: Label
@@ -31,7 +33,7 @@ var npc_dialogs: Dictionary = {
 	"Campones_Finn": "A vida era mais tranquila antes de Vorak.",
 	"Escriba_do_Vale": "Sou o cronista do Vale Cinzento.\nRegistro feitos, guerras e historias.\n[P] para ver seu perfil.",
 	"Arauto_do_Vale": "Sou o mensageiro do Vale.\nAnuncio eventos, temporadas e noticias.\nFique atento aos avisos no chat do sistema.",
-	"Mestre_de_Armas": "Sou o Mestre de Armas.\nTeste seus golpes aqui.\n1=Leve 2=Medio 3=Pesado 4=Block\n5=Critico 6=Sangue 7=Fogo 8=Gelo\n9=Vento 0=Limpar"
+	"Mestre_de_Armas": "Sou o Mestre de Armas do Vale.\nTreine sua postura e golpes aqui,\nlonge dos olhos de Vorak."
 }
 
 func _ready():
@@ -64,10 +66,11 @@ func _ready():
 	_build_road_torches()
 	GameLogger.write_log("[WORLD] DONE - Trees:" + str(tree_count) + " Houses:" + str(house_count) + " NPCs:" + str(npc_count) + " Dragons:" + str(dragon_count))
 	GameLogger.write_log("[WORLD] Vale Cinzento — " + str(get_child_count()) + " objetos carregados")
+	var env = get_node_or_null("WorldEnvironment")
+	if env and env.environment:
+		env.environment.fog_density = 0.00015
 	if obj_label and not OS.is_debug_build():
 		obj_label.visible = false
-	
-	# NOW load optional systems
 	if inventory_panel: inventory_panel.visible = false
 	equipment_panel_node = get_node_or_null("HUD/EquipmentPanel")
 	journal_panel_node = get_node_or_null("HUD/JournalPanel")
@@ -127,6 +130,10 @@ func _ready():
 	server_label = get_node_or_null("HUD/ServerLabel")
 	time_label = get_node_or_null("HUD/TimeLabel")
 	weather_label_node = get_node_or_null("HUD/WeatherLabel")
+	if time_label:
+		time_label.text = ""
+	if weather_label_node:
+		weather_label_node.text = ""
 	var WSScript = load("res://scripts/WorldSimulation.gd")
 	if WSScript:
 		world_sim = WSScript.new(); world_sim.name = "WorldSim"; add_child(world_sim)
@@ -174,7 +181,7 @@ func _ready():
 					blood_fx.brutality = level
 			cfg_http.queue_free()
 		, CONNECT_ONE_SHOT)
-		cfg_http.request("http://5.78.142.138:9000/combat-vfx/config?user_id=" + character_id)
+		cfg_http.request(SERVER_URL + "/combat-vfx/config?user_id=" + character_id)
 
 # ===== PLAZA =====
 func _build_plaza():
@@ -237,7 +244,7 @@ func _spawn_player():
 	# Collision
 	var c = CollisionShape3D.new(); var cs = CapsuleShape3D.new(); cs.radius = 0.5; cs.height = 2.2
 	c.shape = cs; c.position = Vector3(0, 1.1, 0); player.add_child(c)
-	player.position = Vector3(0, 3, 0)
+	player.position = Vector3(0, 0, 0)
 	var ps = load("res://scripts/PlayerController.gd")
 	if ps: player.set_script(ps)
 	add_child(player)
@@ -612,7 +619,7 @@ func _unhandled_input(event):
 		if journal: journal.toggle()
 	elif event.keycode == KEY_P:
 		_show_profile()
-	elif event.keycode >= KEY_0 and event.keycode <= KEY_9:
+	elif OS.is_debug_build() and event.keycode >= KEY_0 and event.keycode <= KEY_9:
 		_debug_vfx(event.keycode)
 	elif event.keycode == KEY_F5:
 		_manual_save()
@@ -700,7 +707,7 @@ func _load_character_data():
 				class_label.text = (str(cn) + " — " if cn else "") + str(on2)
 		alleg_http.queue_free()
 	, CONNECT_ONE_SHOT)
-	alleg_http.request("http://5.78.142.138:9000/characters/" + character_id + "/allegiance")
+	alleg_http.request(SERVER_URL + "/characters/" + character_id + "/allegiance")
 	net.load_save(character_id, func(data):
 		if data and data.has("save") and data["save"] and player:
 			var pos = data["save"].get("position", {})
@@ -800,7 +807,7 @@ func _show_profile():
 				dialog_text_label.text = txt; dialog_panel.visible = true
 		http.queue_free()
 	, CONNECT_ONE_SHOT)
-	http.request("http://5.78.142.138:9000/lore/character/" + character_id)
+	http.request(SERVER_URL + "/lore/character/" + character_id)
 
 func _hide_save_indicator(delay: float):
 	await get_tree().create_timer(delay).timeout

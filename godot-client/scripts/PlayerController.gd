@@ -118,7 +118,6 @@ func _input(event):
 func _toggle_shield():
 	shield_active = !shield_active
 	shield_defense = 3.0
-	print("[COMBAT] Shield: ", shield_active)
 
 func _use_skill(skill_name: String):
 	var sk = skills_ready.get(skill_name, {})
@@ -129,7 +128,6 @@ func _use_skill(skill_name: String):
 		"slash": _melee_skill(8.0, "metal")
 		"fireball": _projectile_skill(12.0, "fire")
 		"heal": _heal_self()
-	print("[SKILL] ", skill_name, " used")
 
 func _melee_skill(dmg: float, impact: String):
 	var space = get_world_3d().direct_space_state
@@ -206,7 +204,6 @@ func _attack():
 	for result in results:
 		var collider = result.get("collider")
 		if collider and collider.has_method("take_damage"):
-			print("[COMBAT] Hit ", collider.name, " for ", attack_damage)
 			collider.take_damage(attack_damage)
 			return
 
@@ -219,13 +216,11 @@ func take_damage(amount: float):
 	if shield_active:
 		shield_defense = max(0, shield_defense - 1)
 		if shield_defense <= 0: shield_active = false
-	print("[COMBAT] Player took ", amount, " damage. HP: ", hp, " Shield: ", shield_active)
 	if hp <= 0:
 		die()
 
 func die():
-	print("[COMBAT] Player died!")
 	hp = max_hp
 	mana = max_mana
-	global_position = Vector3(0, 5, 0)
+	global_position = Vector3(0, 0, 0)
 	velocity = Vector3.ZERO

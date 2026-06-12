@@ -3,32 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dark World Launcher</title>
+  <title>Dark World</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
     <header>
       <h1>DARK WORLD</h1>
-      <p class="subtitle">Dark Fantasy Medieval Brutal MMORPG</p>
+      <p class="subtitle">Vale Cinzento</p>
     </header>
 
     <section class="status-panel">
       <div class="status-row">
         <span>Servidor</span>
-        <strong id="serverStatus">---</strong>
+        <strong id="serverStatus">Verificando...</strong>
       </div>
       <div class="status-row">
         <span>Jogadores online</span>
-        <strong id="playersOnline">---</strong>
+        <strong id="playersOnline">—</strong>
       </div>
       <div class="status-row">
-        <span>Versão local</span>
-        <strong id="localVersion">---</strong>
-      </div>
-      <div class="status-row">
-        <span>Versão remota</span>
-        <strong id="remoteVersion">---</strong>
+        <span>Versão instalada</span>
+        <strong id="gameVersion">—</strong>
       </div>
     </section>
 
@@ -37,10 +33,10 @@
       <p class="progress-text" id="progressText">0%</p>
     </div>
 
-    <p class="message" id="message">Iniciando...</p>
+    <p class="message" id="message">Preparando...</p>
 
-    <section class="changelog">
-      <h2>Changelog</h2>
+    <section class="news-panel">
+      <h2>Novidades</h2>
       <pre id="changelog">Carregando...</pre>
     </section>
 
@@ -54,7 +50,6 @@
       <h2>Configurações</h2>
       <dl id="settingsList"></dl>
       <div class="dialog-actions">
-        <button id="openFolderBtn" class="btn btn-secondary">Abrir pasta do jogo</button>
         <button id="closeSettingsBtn" class="btn btn-primary">Fechar</button>
       </div>
     </dialog>

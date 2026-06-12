@@ -1,6 +1,5 @@
 use crate::logger;
-use crate::paths::{read_local_version};
-use crate::settings::OnPlayBehavior;
+use crate::paths::read_local_version;
 use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
@@ -55,28 +54,21 @@ fn refresh_tooltip(app: &AppHandle) {
 
 pub fn show_launcher_window(app: &AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_skip_taskbar(false);
         let _ = win.unminimize();
         let _ = win.show();
         let _ = win.set_focus();
     }
 }
 
-pub fn hide_launcher_on_play(app: &AppHandle, behavior: &OnPlayBehavior) {
+pub fn hide_launcher_on_play(app: &AppHandle) {
     let Some(win) = app.get_webview_window("main") else {
         return;
     };
-    match behavior {
-        OnPlayBehavior::MinimizeToTray => {
-            let _ = win.minimize();
-            let _ = win.hide();
-        }
-        OnPlayBehavior::Hide => {
-            let _ = win.hide();
-        }
-        OnPlayBehavior::Close => {
-            let _ = win.close();
-        }
-    }
+    let _ = win.set_skip_taskbar(true);
+    let _ = win.minimize();
+    let _ = win.hide();
+    logger::log("Launcher hidden to tray for gameplay");
 }
 
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {

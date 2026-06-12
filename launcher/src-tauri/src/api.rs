@@ -110,9 +110,47 @@ pub async fn fetch_changelog(client: &reqwest::Client) -> Result<String, String>
         .send()
         .await
         .map_err(|e| format!("changelog failed: {e}"))?;
-    resp.text()
+    if !resp.status().is_success() {
+        return Err(format!("changelog HTTP {}", resp.status()));
+    }
+    let text = resp
+        .text()
         .await
-        .map_err(|e| format!("changelog read failed: {e}"))
+        .map_err(|e| format!("changelog read failed: {e}"))?;
+    if text.trim().is_empty() {
+        return Err("changelog empty".to_string());
+    }
+    Ok(text)
+}
+
+pub fn changelog_for_player(raw: &str) -> String {
+    let mut lines: Vec<&str> = Vec::new();
+    for line in raw.lines() {
+        let t = line.trim();
+        if t.is_empty() || t.starts_with('#') {
+            continue;
+        }
+        if t.starts_with('-') {
+            let item = t.trim_start_matches('-').trim();
+            if !item.is_empty()
+                && !item.contains("SHA256")
+                && !item.contains("Tauri")
+                && !item.contains("manifest")
+                && !item.contains("telemetria")
+            {
+                lines.push(item);
+            }
+        }
+    }
+    if lines.is_empty() {
+        return changelog_fallback();
+    }
+    lines.truncate(6);
+    format!("Novidades recentes:\n\n{}", lines.join("\n"))
+}
+
+pub fn changelog_fallback() -> String {
+    "Sem novidades publicadas no momento.\n\nO Vale Cinzento aguarda. Fique atento a futuras atualizacoes.".to_string()
 }
 
 pub async fn send_telemetry(
