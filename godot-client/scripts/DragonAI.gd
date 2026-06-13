@@ -1,5 +1,7 @@
 extends Node3D
 
+signal dragon_died(name)
+
 enum State { IDLE, PATROL, CHASE, ATTACK }
 var current_state: State = State.IDLE
 var hp: float = 100.0
@@ -86,9 +88,8 @@ func take_damage(amount: float):
 
 func _die():
 	if hp_label: hp_label.text = "DERROTADO!"
-	var quest = get_tree().get_first_node_in_group("quest_group")
-	if quest and quest.has_method("check_kill"):
-		quest.check_kill(name_tag, "")
+	dragon_died.emit(name_tag)
+	print("[COMBAT] Dragon died: ", name_tag)
 	await get_tree().create_timer(2.0).timeout
 	queue_free()
 

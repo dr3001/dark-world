@@ -358,10 +358,12 @@ func _build_castle():
 func _spawn_dragon():
 	var pos = Vector3(30, 0, 0)
 	var ds = load("res://assets/quaternius/creatures/Ultimate Monsters/Big/glTF/BlueDemon.gltf")
+	var d: Node3D
 	if ds:
-		var d = ds.instantiate(); d.name = "Vorak_o_Antigo"
+		d = ds.instantiate(); d.name = "Vorak_o_Antigo"
 		d.position = pos; d.scale = Vector3(6, 6, 6); d.rotation_degrees = Vector3(0, 90, 0)
-		add_child(d); dragon_count += 1
+	add_child(d); dragon_count += 1
+	return d
 		var sb = StaticBody3D.new(); sb.position = Vector3(0, 1.5, 0)
 		var col = CollisionShape3D.new(); var bs = BoxShape3D.new(); bs.size = Vector3(4, 3, 6)
 		col.shape = bs; sb.add_child(col); d.add_child(sb)
@@ -376,9 +378,15 @@ func _spawn_dragon():
 		circle.set_surface_override_material(0, cm); circle.position = Vector3(0, 0.03, 0)
 		d.add_child(circle)
 	else:
-		_fallback_dragon(pos)
+		d = _fallback_dragon(pos)
+	if not d: return
+	var ai_script = load("res://scripts/DragonAI.gd")
+	if ai_script: d.set_script(ai_script)
+	d.set("player", player)
+	if d.has_signal("dragon_died"):
+		d.dragon_died.connect(_on_dragon_died)
 
-func _fallback_dragon(pos: Vector3):
+func _fallback_dragon(pos: Vector3) -> Node3D:
 	var d = Node3D.new(); d.name = "Vorak"; d.position = pos; d.scale = Vector3(6, 6, 6); d.rotation_degrees = Vector3(0, 90, 0)
 	var sb = StaticBody3D.new(); sb.position = Vector3(0, 2.5, 0)
 	var col = CollisionShape3D.new(); var fcs = CapsuleShape3D.new(); fcs.radius = 2.0; fcs.height = 7.0
@@ -767,6 +775,20 @@ func _on_target_died(target: Node3D, killer: Node3D):
 func _on_target_blocked(target: Node3D):
 	if shield_vfx: shield_vfx.block_light(target.global_position)
 	if hit_ui: hit_ui.show_blocked(target.global_position)
+
+func _on_dragon_died(dragon_name: String):
+	print("[WORLD] ", dragon_name, " defeated!")
+	if quest_text: quest_text.text = "MISSAO CONCLUIDA! Vorak foi derrotado."
+	if char_profile:
+		char_profile.add_xp(500)
+		char_profile.add_zorium(100)
+	if net and character_id != "":
+		var http = HTTPRequest.new(); add_child(http)
+		http.request_completed.connect(func(_r, _c, _h, _b): http.queue_free(), CONNECT_ONE_SHOT)
+		http.request("http://5.78.142.138:9000/characters/" + character_id + "/quests/complete", ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify({"quest_id": "d0000000-0000-0000-0000-000000000001"}))
+	if journal: journal.load_from_server([])
+
+func _show_profile():
 	if character_id == "" or not dialog_panel: return
 	var http = HTTPRequest.new(); add_child(http)
 	http.request_completed.connect(func(_r, code, _h, resp):
