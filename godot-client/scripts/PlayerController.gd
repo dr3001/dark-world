@@ -25,43 +25,70 @@ var skills_ready: Dictionary = {
 	"fireball": {"cooldown": 0.0, "ready": true, "mana": 15},
 	"heal": {"cooldown": 0.0, "ready": true, "mana": 20}
 }
+var _last_logged_pos: Vector3 = Vector3.ZERO
+var _debug_tick: int = 0
 
 func _ready():
 	for c in get_children():
 		if c is Node3D and c.name != "CollisionShape3D":
 			player_model = c
 			break
-	# Check if we have shield equipment
-	var eq_data = get_node_or_null("../World") if get_node_or_null("../World") else null
-	pass
+	_last_logged_pos = global_position
+	PlayerDebug.log_event("MOVEMENT_ENABLED", "spawn=%s" % str(global_position))
+
+func _gather_input_dir() -> Vector3:
+	var input_dir := Vector3.ZERO
+	if Input.is_key_pressed(KEY_W) or Input.is_action_pressed("ui_up"):
+		input_dir.z -= 1
+	if Input.is_key_pressed(KEY_S) or Input.is_action_pressed("ui_down"):
+		input_dir.z += 1
+	if Input.is_key_pressed(KEY_A) or Input.is_action_pressed("ui_left"):
+		input_dir.x -= 1
+	if Input.is_key_pressed(KEY_D) or Input.is_action_pressed("ui_right"):
+		input_dir.x += 1
+	return input_dir.normalized()
 
 func _physics_process(delta):
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
 		velocity.y = jump_velocity
-	var current_speed = run_speed if Input.is_key_pressed(KEY_SHIFT) else speed
-	var input_dir = Vector3.ZERO
-	if Input.is_key_pressed(KEY_W): input_dir.z -= 1
-	if Input.is_key_pressed(KEY_S): input_dir.z += 1
-	if Input.is_key_pressed(KEY_A): input_dir.x -= 1
-	if Input.is_key_pressed(KEY_D): input_dir.x += 1
-	input_dir = input_dir.normalized()
+
+	var current_speed := run_speed if Input.is_key_pressed(KEY_SHIFT) else speed
+	var input_dir := _gather_input_dir()
 	is_moving = input_dir != Vector3.ZERO
-	if input_dir != Vector3.ZERO:
+
+	if is_moving:
+		PlayerDebug.log_event("INPUT_RECEIVED", "dir=%s" % str(input_dir))
 		velocity.x = move_toward(velocity.x, input_dir.x * current_speed, accel * delta)
 		velocity.z = move_toward(velocity.z, input_dir.z * current_speed, accel * delta)
-		var target_angle = atan2(input_dir.x, -input_dir.z)
+		var target_angle := atan2(input_dir.x, -input_dir.z)
 		rotation.y = lerp_angle(rotation.y, target_angle, rot_speed * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0, decel * delta)
 		velocity.z = move_toward(velocity.z, 0, decel * delta)
+
+	var before := global_position
 	move_and_slide()
+
+	if get_slide_collision_count() > 0:
+		PlayerDebug.log_event("COLLISION_DETECTED", "count=%d" % get_slide_collision_count())
+
+	if is_moving and global_position.distance_to(before) < 0.01:
+		PlayerDebug.log_event("PLAYER_BLOCKED", "vel=%s on_floor=%s" % [str(velocity), is_on_floor()])
+
+	_debug_tick += 1
+	if _debug_tick % 30 == 0 and global_position.distance_to(_last_logged_pos) > 0.05:
+		PlayerDebug.log_event("PLAYER_MOVED", "%s -> %s" % [str(_last_logged_pos.round()), str(global_position.round())])
+		_last_logged_pos = global_position
+
 	if global_position.y < -10:
-		global_position = Vector3(0, 5, 0)
+		global_position = Vector3(0, 0, 0)
 		velocity = Vector3.ZERO
+
 	if player_model and player_model.has_method("animate_walk"):
 		player_model.animate_walk(delta, is_moving)
+
 	for sn in skills_ready:
 		var sk = skills_ready[sn]
 		if not sk.ready:
@@ -69,40 +96,6 @@ func _physics_process(delta):
 			if sk.cooldown <= 0:
 				sk.cooldown = 0
 				sk.ready = true
-	# Jump
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
-		velocity.y = jump_velocity
-	
-	# Sprint
-	var current_speed = run_speed if Input.is_key_pressed(KEY_SHIFT) else speed
-	
-	# Movement
-	var input_dir = Vector3.ZERO
-	if Input.is_key_pressed(KEY_W): input_dir.z -= 1
-	if Input.is_key_pressed(KEY_S): input_dir.z += 1
-	if Input.is_key_pressed(KEY_A): input_dir.x -= 1
-	if Input.is_key_pressed(KEY_D): input_dir.x += 1
-	
-	input_dir = input_dir.normalized()
-	is_moving = input_dir != Vector3.ZERO
-	
-	if input_dir != Vector3.ZERO:
-		velocity.x = move_toward(velocity.x, input_dir.x * current_speed, accel * delta)
-		velocity.z = move_toward(velocity.z, input_dir.z * current_speed, accel * delta)
-		var target_angle = atan2(input_dir.x, -input_dir.z)
-		rotation.y = lerp_angle(rotation.y, target_angle, rot_speed * delta)
-	else:
-		velocity.x = move_toward(velocity.x, 0, decel * delta)
-		velocity.z = move_toward(velocity.z, 0, decel * delta)
-	
-	move_and_slide()
-	
-	if global_position.y < -10:
-		global_position = Vector3(0, 5, 0)
-		velocity = Vector3.ZERO
-	
-	if player_model and player_model.has_method("animate_walk"):
-		player_model.animate_walk(delta, is_moving)
 
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -118,7 +111,6 @@ func _input(event):
 func _toggle_shield():
 	shield_active = !shield_active
 	shield_defense = 3.0
-	print("[COMBAT] Shield: ", shield_active)
 
 func _use_skill(skill_name: String):
 	var sk = skills_ready.get(skill_name, {})
@@ -129,7 +121,6 @@ func _use_skill(skill_name: String):
 		"slash": _melee_skill(8.0, "metal")
 		"fireball": _projectile_skill(12.0, "fire")
 		"heal": _heal_self()
-	print("[SKILL] ", skill_name, " used")
 
 func _melee_skill(dmg: float, impact: String):
 	var space = get_world_3d().direct_space_state
@@ -192,7 +183,7 @@ func _attack():
 	var result = cs.resolve_hit(best_target, self, stats)
 	if not result.get("hit"): return
 	cs.apply_damage(best_target, result, self)
-	last_attack_time = now
+	last_attack_time = Time.get_ticks_msec() / 1000.0
 	
 	# Find nearest dragon within range
 	var space = get_world_3d().direct_space_state
@@ -206,7 +197,6 @@ func _attack():
 	for result in results:
 		var collider = result.get("collider")
 		if collider and collider.has_method("take_damage"):
-			print("[COMBAT] Hit ", collider.name, " for ", attack_damage)
 			collider.take_damage(attack_damage)
 			return
 
@@ -219,13 +209,11 @@ func take_damage(amount: float):
 	if shield_active:
 		shield_defense = max(0, shield_defense - 1)
 		if shield_defense <= 0: shield_active = false
-	print("[COMBAT] Player took ", amount, " damage. HP: ", hp, " Shield: ", shield_active)
 	if hp <= 0:
 		die()
 
 func die():
-	print("[COMBAT] Player died!")
 	hp = max_hp
 	mana = max_mana
-	global_position = Vector3(0, 5, 0)
+	global_position = Vector3(0, 0, 0)
 	velocity = Vector3.ZERO

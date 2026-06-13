@@ -1,8 +1,7 @@
-res://scenes/models/Dragon.tscn::2891299fd576d5aa7d682b0539f80640::1781141313::res://.godot/exported/133200997/export-27428caabb96f351978d2270dbc14b02-Dragon.scn
-res://scenes/models/Player.tscn::3c3676c30635cebd028962784d26ccde::1781141237::res://.godot/exported/133200997/export-fb8a7670d454b43715b7551346e13146-Player.scn
-res://scenes/test/DragonTest.tscn::d31c698403b6a8bf01ee3f448c4e9eed::1781142563::res://.godot/exported/133200997/export-9da83bb9b3d9b0a49b6540e2b47ab9c8-DragonTest.scn
-res://scenes/test/TestLoader.tscn::eb8741e0f3b548a29f9abd15a2622e75::1781137806::res://.godot/exported/133200997/export-92da877df6ab7c7a60130681515b3c33-TestLoader.scn
-res://scenes/Afterlife.tscn::a7cbb33325f3d560d60da777c36ddcb2::1781136485::res://.godot/exported/133200997/export-58c4e3fbb715b52d0a85d7c571a9362f-Afterlife.scn
-res://scenes/Login.tscn::f9f84983012780b65562345853947b49::1781144485::res://.godot/exported/133200997/export-742156800d8cc4d9995ea5ff4351d464-Login.scn
-res://scenes/Main.tscn::a26c518a9c9aaf05cb078211e74596c7::1781127607::res://.godot/exported/133200997/export-4a24720ee5e787dbe30abc634fa3679d-Main.scn
-res://scenes/World.tscn::8cb99195d3817aabe080217ea6a67e4d::1781145845::res://.godot/exported/133200997/export-57a8a85058368be1f5628ef4b8140bf5-World.scn
+res://scenes/models/Dragon.tscn::2891299fd576d5aa7d682b0539f80640::1781179433::res://.godot/exported/133200997/export-27428caabb96f351978d2270dbc14b02-Dragon.scn
+res://scenes/models/Player.tscn::3c3676c30635cebd028962784d26ccde::1781179433::res://.godot/exported/133200997/export-fb8a7670d454b43715b7551346e13146-Player.scn
+res://scenes/test/DragonTest.tscn::d31c698403b6a8bf01ee3f448c4e9eed::1781179433::res://.godot/exported/133200997/export-9da83bb9b3d9b0a49b6540e2b47ab9c8-DragonTest.scn
+res://scenes/test/TestLoader.tscn::eb8741e0f3b548a29f9abd15a2622e75::1781179433::res://.godot/exported/133200997/export-92da877df6ab7c7a60130681515b3c33-TestLoader.scn
+res://scenes/Afterlife.tscn::a7cbb33325f3d560d60da777c36ddcb2::1781179433::res://.godot/exported/133200997/export-58c4e3fbb715b52d0a85d7c571a9362f-Afterlife.scn
+res://scenes/Login.tscn::f8e1584ccdb45a68ff26197de9271a4f::1781224658::res://.godot/exported/133200997/export-742156800d8cc4d9995ea5ff4351d464-Login.scn
+res://scenes/World.tscn::c12bae8a000f289aca3b34241cefec27::1781225803::res://.godot/exported/133200997/export-57a8a85058368be1f5628ef4b8140bf5-World.scn

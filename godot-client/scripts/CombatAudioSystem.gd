@@ -1,19 +1,19 @@
 extends Node
 
-func play_hit(impact_level: String = "medium"):
-	print("[AUDIO] hit_" + impact_level + " (placeholder)")
+func play_hit(_impact_level: String = "medium"):
+	pass
 
 func play_block():
-	print("[AUDIO] block (placeholder)")
+	pass
 
 func play_critical():
-	print("[AUDIO] critical (placeholder)")
+	pass
 
 func play_arrow():
-	print("[AUDIO] arrow (placeholder)")
+	pass
 
 func play_magic():
-	print("[AUDIO] magic_cast (placeholder)")
+	pass
 
 func play_death():
-	print("[AUDIO] death (placeholder)")
+	pass

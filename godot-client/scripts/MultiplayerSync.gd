@@ -1,6 +1,6 @@
 extends Node
 
-const SERVER_URL = "http://5.78.142.138:9000"
+const SERVER_URL = "https://dark.zorionlabs.net/dw-api"
 var net = null
 var character_id: String = ""
 var player_node: CharacterBody3D = null

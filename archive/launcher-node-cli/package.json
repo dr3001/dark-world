@@ -1,0 +1,18 @@
+{
+  "name": "darkworld-launcher-node",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": "launcher.mjs",
+  "scripts": {
+    "start": "node launcher.mjs",
+    "build:win": "npx @yao-pkg/pkg launcher.mjs --targets node22-win-x64 --output ../build/launcher/DarkWorld-Launcher.exe",
+    "build:mac": "npx @yao-pkg/pkg launcher.mjs --targets node22-macos-x64 --output ../build/launcher/DarkWorld-Launcher-mac"
+  },
+  "dependencies": {
+    "tar": "^7.4.3",
+    "unzipper": "^0.12.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.3.2"
+  }
+}

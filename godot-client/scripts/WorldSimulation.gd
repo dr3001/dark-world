@@ -1,6 +1,6 @@
 extends Node
 
-const SERVER_URL = "http://5.78.142.138:9000"
+const SERVER_URL = "https://dark.zorionlabs.net/dw-api"
 var sun: DirectionalLight3D
 var env_node: WorldEnvironment
 var time_label: Label
@@ -20,6 +20,7 @@ func setup(sun_node: DirectionalLight3D, world_env: WorldEnvironment, t_label: L
 	env_node = world_env
 	time_label = t_label
 	weather_label = w_label
+	_fetch_world_state()
 
 func _process(delta):
 	poll_timer += delta

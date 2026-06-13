@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dark World</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DARK WORLD</h1>
+      <p class="subtitle">Vale Cinzento</p>
+    </header>
+
+    <section class="status-panel">
+      <div class="status-row">
+        <span>Servidor</span>
+        <strong id="serverStatus">Verificando...</strong>
+      </div>
+      <div class="status-row">
+        <span>Jogadores online</span>
+        <strong id="playersOnline">—</strong>
+      </div>
+      <div class="status-row">
+        <span>Versão instalada</span>
+        <strong id="gameVersion">—</strong>
+      </div>
+    </section>
+
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <p class="progress-text" id="progressText">0%</p>
+    </div>
+
+    <p class="message" id="message">Preparando...</p>
+
+    <section class="news-panel">
+      <h2>Novidades</h2>
+      <pre id="changelog">Carregando...</pre>
+    </section>
+
+    <div class="actions">
+      <button id="playBtn" class="btn btn-primary" disabled>Jogar</button>
+      <button id="repairBtn" class="btn btn-secondary">Reparar</button>
+      <button id="settingsBtn" class="btn btn-secondary" title="Configurações">⚙</button>
+    </div>
+
+    <dialog id="settingsDialog" class="settings-dialog">
+      <h2>Configurações</h2>
+      <dl id="settingsList"></dl>
+      <div class="dialog-actions">
+        <button id="closeSettingsBtn" class="btn btn-primary">Fechar</button>
+      </div>
+    </dialog>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

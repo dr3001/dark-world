@@ -1,8 +1,8 @@
 {
-  "game_version": "5.0.5",
-  "launcher_version": "1.0.0",
+  "game_version": "5.0.8",
+  "launcher_version": "1.0.5",
   "backend_min_version": "2.0.0",
-  "force_update": true,
+  "force_update": false,
   "channel": "stable",
   "platforms": ["windows", "macos"],
   "project": "Dark World",

@@ -10,7 +10,7 @@ rm -rf "$BUILD/windows"
 mkdir -p "$BUILD/windows"
 
 echo "[2/6] Exporting Windows debug build..."
-GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-debug "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | tail -5
+GODOT_SILENCE_ROOT_WARNING=1 "$GODOT" --headless --path "$PROJECT" --export-release "Windows" "$BUILD/windows/DarkWorld.exe" 2>&1 | tail -5
 
 echo "[3/6] Validating..."
 ls -lh "$BUILD/windows/"

@@ -1,22 +1,16 @@
 extends Node
 
-const SERVER_URL = "http://5.78.142.138:9000"
+const SERVER_URL = "https://dark.zorionlabs.net/dw-api"
 
 var account_id: String = ""
 var entity_id: String = ""
 
-func _ready():
-	print("[NetClient] _ready()")
-
 func _make_request(url: String, callback: Callable, name: String, method := HTTPClient.METHOD_GET, body := ""):
-	print("[NetClient] REQUEST ", name, " -> ", url)
 	var http = HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(func(result, code, _h, resp_body):
-		print("[NetClient] RESPONSE ", name, " result=", result, " code=", code)
 		if resp_body != null:
 			var text = resp_body.get_string_from_utf8()
-			print("[NetClient]   body=", text.substr(0, 150))
 			var data = JSON.parse_string(text)
 			if callback.is_valid():
 				callback.call(data)
